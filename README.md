@@ -25,4 +25,5 @@ After successful launch, you can type "/start" to your bot in Telegram and chat 
 
 ### Additional properties
 dev - if dev = 1, all messages from Telegram will be printed out and not inserted into the database.
+
 lang - bot language.

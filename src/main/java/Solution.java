@@ -45,8 +45,7 @@ public class Solution {
             SimpleFormatter formatter = new SimpleFormatter();
             fileHandler.setFormatter(formatter);
         } catch (IOException e) {
-            e.printStackTrace();
-            System.exit(1);
+            System.out.println("Unable to create log file.");
         }
     }
 }
