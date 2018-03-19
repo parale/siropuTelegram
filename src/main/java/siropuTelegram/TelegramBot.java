@@ -1,3 +1,5 @@
+package siropuTelegram;
+
 import org.telegram.telegrambots.api.methods.GetFile;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
 import org.telegram.telegrambots.api.objects.File;
@@ -6,6 +8,7 @@ import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.api.objects.stickers.Sticker;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
+import siropuTelegram.XenForo.XenForo;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -15,7 +18,6 @@ import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Comparator;
-import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -23,7 +25,6 @@ import java.util.regex.Pattern;
 public class TelegramBot extends TelegramLongPollingBot {
     private Logger LOGGER = Solution.LOGGER;
     private ChatUpdater chatUpdater;
-    private ResourceBundle res = ResourceBundle.getBundle("locale." + Properties.lang);
 
     public TelegramBot() {
         LOGGER.log(Level.INFO, "Telegram bot started.");
@@ -102,7 +103,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (forum.createUser(user.getXfUserId(), user.getTelegramUserName(), update.getMessage().getChatId())) {
                 SendMessage reply = new SendMessage();
                 reply.setChatId(update.getMessage().getChatId());
-                reply.setText(res.getString("subscribe"));
+                reply.setText(Properties.res.getString("subscribe"));
                 try {
                     execute(reply);
                 } catch (TelegramApiException e) {
@@ -120,7 +121,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (forum.deleteUser(user.getTelegramUserName())) {
                 SendMessage reply = new SendMessage();
                 reply.setChatId(update.getMessage().getChatId());
-                reply.setText(res.getString("unsubscribe"));
+                reply.setText(Properties.res.getString("unsubscribe"));
                 try {
                     execute(reply);
                 } catch (TelegramApiException e) {
@@ -175,7 +176,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     forum.sendMessage(user.getXfUserId(), String.format("[url]%s%s[/url]", Properties.mediaurl, fileName));
                     SendMessage reply = new SendMessage();
                     reply.setChatId(update.getMessage().getChatId());
-                    reply.setText(res.getString("photoSuccess"));
+                    reply.setText(Properties.res.getString("photoSuccess"));
                     try {
                         execute(reply);
                     } catch (TelegramApiException e) {
@@ -200,7 +201,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void photoFail(Update update) {
         SendMessage reply = new SendMessage();
         reply.setChatId(update.getMessage().getChatId());
-        reply.setText(res.getString("photoFail"));
+        reply.setText(Properties.res.getString("photoFail"));
         try {
             execute(reply);
         } catch (TelegramApiException e) {

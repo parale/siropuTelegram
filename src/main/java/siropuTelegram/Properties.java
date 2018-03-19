@@ -1,4 +1,7 @@
+package siropuTelegram;
+
 import java.io.*;
+import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -6,10 +9,15 @@ public class Properties {
     private Logger LOGGER = Solution.LOGGER;
     static java.util.Properties properties = new java.util.Properties();
 
-    static String db_host, db_user, db_password, settings_table, users_table, xf_prefix;
-    static String bot_token, bot_username;
-    static String saveto, mediaurl, dev, sqlconnections;
-    static String ffmpeg, lang;
+    public static String db_host, db_user, db_password, settings_table, users_table, xf_prefix;
+    public static String bot_token, bot_username;
+    public static String saveto, mediaurl, dev, sqlconnections, forumurl;
+    public static String ffmpeg, version;
+
+    public static int lastMessageId = 0;
+    public static int lastThreadId = 0;
+
+    public static ResourceBundle res;
 
     Properties() throws IOException {
         try {
@@ -36,7 +44,12 @@ public class Properties {
         ffmpeg = properties.getProperty("ffmpeg");
         sqlconnections = properties.getProperty("sqlconnections");
         xf_prefix = properties.getProperty("xf_prefix");
-        lang = properties.getProperty("lang");
+        res = ResourceBundle.getBundle("locale." + properties.getProperty("lang"));
+        forumurl = properties.getProperty("forumurl");
+        version = properties.getProperty("version");
+        fileInputStream.close();
+
+        checkPropertiesVersion();
     }
 
     private static void initProperties() throws IOException {
@@ -55,12 +68,14 @@ public class Properties {
             properties.setProperty("settings_table", bufferedReader.readLine());
             System.out.println("Clients list table name (example: transport_clients):");
             properties.setProperty("users_table", bufferedReader.readLine());
-            System.out.println("XenForo tables prefix (default: xf_):");
+            System.out.println("siropuTelegram.XenForo.siropuTelegram.XenForo tables prefix (default: xf_):");
             properties.setProperty("xf_prefix", bufferedReader.readLine());
             System.out.println("Telegram bot token api:");
             properties.setProperty("bot_token", bufferedReader.readLine());
             System.out.println("Telegram bot username:");
             properties.setProperty("bot_username", bufferedReader.readLine());
+            System.out.println("Forum url (example: https://forum.com/):");
+            properties.setProperty("forumurl", bufferedReader.readLine());
             System.out.println("Media folder (should be visible from web):");
             properties.setProperty("saveto", bufferedReader.readLine());
             System.out.println("Url to the media folder (https://hostname/media/):");
@@ -68,15 +83,47 @@ public class Properties {
             System.out.println("Ffmpeg binary path (to convert webp stickers to png):");
             properties.setProperty("ffmpeg", bufferedReader.readLine());
 
+            bufferedReader.close();
+
             properties.setProperty("sqlconnections", "0");
             properties.setProperty("dev", "0");
             properties.setProperty("lang", "en");
+            properties.setProperty("version", "1");
 
             properties.store(fileOutputStream, null);
+            fileOutputStream.close();
 
             setProperties();
         } else {
             throw new IOException();
+        }
+    }
+
+
+    private static void checkPropertiesVersion() throws IOException {
+        int ver;
+
+        try {
+            ver = Integer.parseInt(version);
+        } catch (NumberFormatException e) {
+            ver = 0;
+        }
+
+        if (ver < 1) {
+            FileOutputStream fileOutputStream = new FileOutputStream("bot.properties");
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
+
+            System.out.println("Forum url (example: https://forum.com/):");
+            properties.setProperty("forumurl", bufferedReader.readLine());
+
+            bufferedReader.close();
+
+            properties.setProperty("version", "1");
+
+            properties.store(fileOutputStream, null);
+            fileOutputStream.close();
+
+            setProperties();
         }
     }
 }

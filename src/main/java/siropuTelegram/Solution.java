@@ -1,6 +1,9 @@
+package siropuTelegram;
+
 import org.telegram.telegrambots.ApiContextInitializer;
 import org.telegram.telegrambots.TelegramBotsApi;
 import org.telegram.telegrambots.exceptions.TelegramApiRequestException;
+import siropuTelegram.XenForo.XenForo;
 
 import java.io.IOException;
 import java.util.logging.FileHandler;
@@ -9,7 +12,7 @@ import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
 public class Solution {
-    static final Logger LOGGER = Logger.getLogger("XenForo to Telegram bot logs");
+    public static final Logger LOGGER = Logger.getLogger("Telegram bot logs");
 
     public static void main(String[] args) {
         initFileHandler();

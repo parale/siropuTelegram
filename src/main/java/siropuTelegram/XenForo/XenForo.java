@@ -1,9 +1,13 @@
+package siropuTelegram.XenForo;
+
 import com.mysql.jdbc.exceptions.jdbc4.CommunicationsException;
 import com.mysql.jdbc.exceptions.jdbc4.MySQLNonTransientConnectionException;
+import siropuTelegram.Properties;
+import siropuTelegram.Solution;
+import siropuTelegram.User;
 
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -12,8 +16,6 @@ public class XenForo {
     private Connection con = null;
 
     private static int connections = 0;
-
-    private int lastMessageId = 0;
 
     private String host;
     private String user;
@@ -37,7 +39,7 @@ public class XenForo {
             con = DriverManager.getConnection("jdbc:mysql://" + host, user, password);
             if (Properties.sqlconnections.equals("1")) {
                 connections++;
-                System.out.println("+ " + connections + " " + Thread.currentThread().getStackTrace()[2]);
+                System.out.println("+ " + connections + " " + java.lang.Thread.currentThread().getStackTrace()[2]);
             }
         } catch (CommunicationsException e) {
             LOGGER.log(Level.SEVERE, "Can't connect to the database.");
@@ -54,7 +56,7 @@ public class XenForo {
                 con.close();
                 if (Properties.sqlconnections.equals("1")) {
                     connections--;
-                    System.out.println("- " + connections + " " + Thread.currentThread().getStackTrace()[2]);
+                    System.out.println("- " + connections + " " + java.lang.Thread.currentThread().getStackTrace()[2]);
                 }
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Can't disconnect from the database.");
@@ -84,18 +86,18 @@ public class XenForo {
         }
     }
 
-    public HashMap<Integer, ArrayList<java.io.Serializable>> getAllMessages() {
+    public ArrayList<ChatMessage> getAllMessages() {
         ResultSet result;
-        if (lastMessageId == 0) {
+        if (Properties.lastMessageId == 0) {
             result = query("select value from " + Properties.settings_table + " where name = \"lastMessageId\"");
             try {
                 if (result != null) {
                     result.next();
-                    int newMessageId = Integer.parseInt(result.getString(1));
-                    if (lastMessageId == newMessageId) {
+                    int newMessageId = result.getInt(1);
+                    if (Properties.lastMessageId == newMessageId) {
                         return null;
                     } else {
-                        lastMessageId = newMessageId;
+                        Properties.lastMessageId = newMessageId;
                     }
                 }
             } catch (SQLException e) {
@@ -104,23 +106,66 @@ public class XenForo {
             }
         }
 
-        result = query("select shout_id, " + Properties.xf_prefix + "user.username, shout_message, shout_date, " + Properties.xf_prefix + "user.user_id from " + Properties.xf_prefix + "siropu_shoutbox_shout inner join " + Properties.xf_prefix + "user on " + Properties.xf_prefix + "siropu_shoutbox_shout.shout_user_id = " + Properties.xf_prefix + "user.user_id where shout_id > " + lastMessageId);
-        HashMap<Integer, ArrayList<java.io.Serializable>> messages = new HashMap<>();
+        result = query("select shout_id, " + Properties.xf_prefix + "user.username, shout_message, shout_date, " + Properties.xf_prefix + "user.user_id from " + Properties.xf_prefix + "siropu_shoutbox_shout inner join " + Properties.xf_prefix + "user on " + Properties.xf_prefix + "siropu_shoutbox_shout.shout_user_id = " + Properties.xf_prefix + "user.user_id where shout_id > " + Properties.lastMessageId);
+        ArrayList<ChatMessage> messages = new ArrayList<>();
         if (result != null) {
             try {
                 while (result.next()) {
-                    ArrayList<java.io.Serializable> array = new ArrayList<java.io.Serializable>(4);
-                    array.add(result.getString(2));
-                    array.add(result.getString(3));
-                    array.add(result.getInt(4));
-                    array.add(result.getInt(5));
-                    lastMessageId = result.getInt(1);
-                    messages.put(result.getInt(1), array);
+                    ChatMessage chatMessage = new ChatMessage(
+                            result.getInt(1),
+                            result.getString(3),
+                            result.getString(2),
+                            result.getInt(5),
+                            result.getInt(4)
+                    );
+
+                    Properties.lastMessageId = result.getInt(1);
+                    messages.add(chatMessage);
                 }
 
-
-                update("update " + Properties.settings_table + " set value = " + lastMessageId + " where name = \"lastMessageId\"");
+                update("update " + Properties.settings_table + " set value = " + Properties.lastMessageId + " where name = \"lastMessageId\"");
                 return messages;
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, e.toString(), e);
+                return null;
+            }
+        } else {
+            return null;
+        }
+    }
+
+    public ArrayList<Thread> getNewThreads() {
+        ResultSet result;
+
+        if (Properties.lastThreadId == 0) {
+            result = query("select thread_id from " + Properties.xf_prefix + "thread order by thread_id desc limit 1");
+            try {
+                if (result != null) {
+                    result.next();
+                    Properties.lastThreadId = result.getInt(1);
+                }
+                return null;
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, e.toString(), e);
+                return null;
+            }
+        }
+
+        result = query("select thread_id, title, username from " + Properties.xf_prefix + "thread where thread_id > " + Properties.lastThreadId);
+        ArrayList<Thread> threads = new ArrayList<>();
+        if (result != null) {
+            try {
+                while (result.next()) {
+                    threads.add(new Thread(
+                            result.getInt(1),
+                            result.getString(2),
+                            result.getString(3))
+                    );
+
+                    Properties.lastThreadId = result.getInt(1);
+                }
+
+                return threads;
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, e.toString(), e);
                 return null;
@@ -214,16 +259,19 @@ public class XenForo {
         }
     }
 
-    public HashMap<Integer, Long> getClientsList() {
+    public ArrayList<User> getClientsList() {
         ResultSet result;
 
         result = query("select xf_user_id, chat_id from " + Properties.users_table);
 
         if (result != null) {
-            HashMap<Integer, Long> clients = new HashMap<Integer, Long>();
+            ArrayList<User> clients = new ArrayList<>();
             try {
                 while (result.next()) {
-                    clients.put(result.getInt(1), result.getLong(2));
+                    User user = new User();
+                    user.setXfUserId(result.getInt(1));
+                    user.setTelegramChatId(result.getLong(2));
+                    clients.add(user);
                 }
                 return clients;
             } catch (SQLException e) {
@@ -235,7 +283,7 @@ public class XenForo {
         }
     }
 
-    void createTables() {
+    public void createTables() {
         ResultSet result = query("show tables like \"" + Properties.users_table + "\"");
         try {
             if (!result.next()) {
@@ -256,7 +304,7 @@ public class XenForo {
         }
     }
 
-    void checkUserField() {
+    public void checkUserField() {
         ResultSet result = query("select * from " + Properties.xf_prefix + "user_field where field_id = \"telegram\"");
         try {
             if (!result.next()) {

@@ -1,6 +1,17 @@
+package siropuTelegram;
+
 public class User {
     private String telegramUserName;
+    private long telegramChatId;
     private int xfUserId;
+
+    public long getTelegramChatId() {
+        return telegramChatId;
+    }
+
+    public void setTelegramChatId(long telegramChatId) {
+        this.telegramChatId = telegramChatId;
+    }
 
     public int getXfUserId() {
         return xfUserId;
