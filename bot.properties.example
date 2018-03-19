@@ -1,0 +1,18 @@
+bot_username=my_bot
+users_table=transport_clients
+settings_table=transport_settings
+bot_token=1111111\:AAAAAAAAAAAAAAAAA
+db_user=root
+db_password=password
+db_host=localhost\:3306/forum
+forumurl=https\://forum.com/
+saveto=/home/forum/www/media/
+mediaurl=https\://forum.com/media/
+xf_prefix=xf_
+lang=en
+ffmpeg=ffmpeg
+# print messages received by bot to the system console
+dev=0
+# keep as is
+version=1
+sqlconnections=0

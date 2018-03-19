@@ -70,7 +70,7 @@ public class ChatUpdater extends java.lang.Thread {
 
         if (threads != null) {
             for (Thread thread : threads) {
-                sendToClients(480, String.format("%s %s \"%s\": %s", thread.getAuthor(), Properties.res.getString("newThread"), thread.getTitle(), thread.getUrl()));
+                sendToClients(0, String.format("%s %s \"%s\": %s", thread.getAuthor(), Properties.res.getString("newThread"), thread.getTitle(), thread.getUrl()));
             }
         }
     }

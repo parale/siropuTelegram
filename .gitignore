@@ -72,3 +72,13 @@ crashlytics.properties
 crashlytics-build.properties
 fabric.properties
 bot.properties
+.DS_Store
+src/.DS_Store
+src/main/.DS_Store
+src/main/java/.DS_Store
+src/main/resources/META-INF/
+src/test/
+target/.DS_Store
+target/classes/META-INF/
+target/classes/locale/
+target/generated-sources/
