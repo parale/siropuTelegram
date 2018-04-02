@@ -13,7 +13,7 @@ public class Thread {
         this.author = author;
     }
 
-    public int getId() {
+    private int getId() {
         return id;
     }
 

@@ -6,13 +6,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Properties {
-    private Logger LOGGER = Solution.LOGGER;
-    static java.util.Properties properties = new java.util.Properties();
+    private static final java.util.Properties properties = new java.util.Properties();
 
     public static String db_host, db_user, db_password, settings_table, users_table, xf_prefix;
     public static String bot_token, bot_username;
     public static String saveto, mediaurl, dev, sqlconnections, forumurl;
-    public static String ffmpeg, version;
+    public static String ffmpeg;
+    private static String version;
 
     public static int lastMessageId = 0;
     public static int lastThreadId = 0;
@@ -23,6 +23,7 @@ public class Properties {
         try {
             setProperties();
         } catch (FileNotFoundException e) {
+            Logger LOGGER = Solution.LOGGER;
             LOGGER.log(Level.SEVERE, e.toString(), e);
             initProperties();
         }

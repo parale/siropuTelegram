@@ -1,13 +1,12 @@
 package siropuTelegram.XenForo;
 
-import com.mysql.jdbc.exceptions.jdbc4.CommunicationsException;
-import com.mysql.jdbc.exceptions.jdbc4.MySQLNonTransientConnectionException;
 import siropuTelegram.Properties;
 import siropuTelegram.Solution;
 import siropuTelegram.User;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -41,9 +40,6 @@ public class XenForo {
                 connections++;
                 System.out.println("+ " + connections + " " + java.lang.Thread.currentThread().getStackTrace()[2]);
             }
-        } catch (CommunicationsException e) {
-            LOGGER.log(Level.SEVERE, "Can't connect to the database.");
-            LOGGER.log(Level.SEVERE, e.toString(), e);
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Can't connect to the database.");
             LOGGER.log(Level.SEVERE, e.toString(), e);
@@ -112,11 +108,9 @@ public class XenForo {
             try {
                 while (result.next()) {
                     ChatMessage chatMessage = new ChatMessage(
-                            result.getInt(1),
                             result.getString(3),
                             result.getString(2),
-                            result.getInt(5),
-                            result.getInt(4)
+                            result.getInt(5)
                     );
 
                     Properties.lastMessageId = result.getInt(1);
@@ -198,20 +192,27 @@ public class XenForo {
             statement.setString(1, telegram_user_id);
             ResultSet result = statement.executeQuery();
 
-            if (result.next()) {
-                return true;
-            } else {
-                return false;
-            }
-        } catch (CommunicationsException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
-            return isUserActive(telegram_user_id);
-        } catch (MySQLNonTransientConnectionException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
-            return isUserActive(telegram_user_id);
+            return result.next();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, e.toString(), e);
-            return false;
+            return isUserActive(telegram_user_id);
+        }
+    }
+
+    public int getActiveUserId(String telegram_user_id) {
+        try {
+            PreparedStatement statement = con.prepareStatement("select xf_user_id from " + Properties.users_table + " where telegram_user_id = ?");
+            statement.setString(1, telegram_user_id);
+            ResultSet result = statement.executeQuery();
+
+            if (result.next()) {
+                return result.getInt("xf_user_id");
+            } else {
+                return 0;
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, e.toString(), e);
+            return 0;
         }
     }
 
@@ -222,8 +223,18 @@ public class XenForo {
             statement.setString(2, "telegram");
             ResultSet result = statement.executeQuery();
 
-            if (result.next()) {
-                return result.getInt("user_id");
+            int rows = 0;
+            int xf_user_id = 0;
+
+            while (result.next()) {
+                rows++;
+                xf_user_id = result.getInt("user_id");
+            }
+
+            if (rows == 1) {
+                return xf_user_id;
+            } else if (rows > 1) {
+                return -1;
             } else {
                 return 0;
             }
@@ -286,7 +297,7 @@ public class XenForo {
     public void createTables() {
         ResultSet result = query("show tables like \"" + Properties.users_table + "\"");
         try {
-            if (!result.next()) {
+            if (!Objects.requireNonNull(result).next()) {
                 Statement statement = con.createStatement();
                 statement.executeUpdate("CREATE TABLE `" + Properties.users_table + "` (\n" +
                         "  `xf_user_id` int(11) NOT NULL,\n" +
@@ -307,7 +318,7 @@ public class XenForo {
     public void checkUserField() {
         ResultSet result = query("select * from " + Properties.xf_prefix + "user_field where field_id = \"telegram\"");
         try {
-            if (!result.next()) {
+            if (!Objects.requireNonNull(result).next()) {
                 LOGGER.log(Level.SEVERE, "Please create custom user field \"Telegram\" in XF CP.");
                 System.exit(1);
             }

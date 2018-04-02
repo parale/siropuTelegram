@@ -8,11 +8,11 @@ import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class ChatUpdater extends java.lang.Thread {
+class ChatUpdater extends java.lang.Thread {
     private Logger LOGGER = Solution.LOGGER;
     private TelegramBot bot;
 
-    public ChatUpdater(TelegramBot bot) {
+    ChatUpdater(TelegramBot bot) {
         this.bot = bot;
     }
 
@@ -49,7 +49,10 @@ public class ChatUpdater extends java.lang.Thread {
 
             if (messages != null) {
                 for (ChatMessage message : messages) {
-                    sendToClients(message.getAuthorId(), String.format("%s: %s", message.getAuthorName(), message.getMessage()));
+                    sendToClients(
+                            message.getAuthorId(),
+                            String.format("%s: %s", message.getAuthorName(), message.getMessage())
+                    );
                 }
             }
 
@@ -70,7 +73,13 @@ public class ChatUpdater extends java.lang.Thread {
 
         if (threads != null) {
             for (Thread thread : threads) {
-                sendToClients(0, String.format("%s %s \"%s\": %s", thread.getAuthor(), Properties.res.getString("newThread"), thread.getTitle(), thread.getUrl()));
+                sendToClients(0, String.format(
+                        "%s %s \"%s\": %s",
+                        thread.getAuthor(),
+                        Properties.res.getString("newThread"),
+                        thread.getTitle(),
+                        thread.getUrl()
+                ));
             }
         }
     }

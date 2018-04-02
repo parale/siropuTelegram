@@ -10,10 +10,8 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
 import siropuTelegram.XenForo.XenForo;
 
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -22,7 +20,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
-public class TelegramBot extends TelegramLongPollingBot {
+class TelegramBot extends TelegramLongPollingBot {
     private Logger LOGGER = Solution.LOGGER;
     private ChatUpdater chatUpdater;
 
@@ -54,16 +52,18 @@ public class TelegramBot extends TelegramLongPollingBot {
         user.setTelegramUserName(update.getMessage().getChat().getUserName());
 
         if (forum.isUserActive(user.getTelegramUserName())) {
-            user.setXfUserId(forum.getUserIdByTelegram(user.getTelegramUserName()));
-            // photos
-            if (update.hasMessage() && update.getMessage().hasPhoto()) {
-                photoMessage(update, user);
-            }
+            user.setXfUserId(forum.getActiveUserId(user.getTelegramUserName()));
+            if (user.getXfUserId() > 0) {
+                // photos
+                if (update.hasMessage() && update.getMessage().hasPhoto()) {
+                    photoMessage(update, user);
+                }
 
-            // stickers
-            Sticker sticker;
-            if ((sticker = update.getMessage().getSticker()) != null) {
-                stickerMessage(sticker, user);
+                // stickers
+                Sticker sticker;
+                if ((sticker = update.getMessage().getSticker()) != null) {
+                    stickerMessage(sticker, user);
+                }
             }
         }
 
@@ -99,16 +99,27 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void startMessage(Update update, User user) {
         XenForo forum = new XenForo(Properties.db_host, Properties.db_user, Properties.db_password);
-        if (!forum.isUserActive(user.getTelegramUserName()) && forum.getUserIdByTelegram(user.getTelegramUserName()) > 0) {
-            if (forum.createUser(user.getXfUserId(), user.getTelegramUserName(), update.getMessage().getChatId())) {
-                SendMessage reply = new SendMessage();
-                reply.setChatId(update.getMessage().getChatId());
-                reply.setText(Properties.res.getString("subscribe"));
-                try {
-                    execute(reply);
-                } catch (TelegramApiException e) {
-                    logException(e);
+        user.setXfUserId(forum.getUserIdByTelegram(user.getTelegramUserName()));
+        if (!forum.isUserActive(user.getTelegramUserName())) {
+            SendMessage reply = new SendMessage();
+            reply.setChatId(update.getMessage().getChatId());
+
+            if (user.getXfUserId() > 0) {
+                if (forum.createUser(user.getXfUserId(), user.getTelegramUserName(), update.getMessage().getChatId())) {
+                    reply.setText(Properties.res.getString("subscribe"));
+                } else {
+                    reply.setText(Properties.res.getString("unknownError"));
                 }
+            } else if (user.getXfUserId() == -1) {
+                reply.setText(Properties.res.getString("doubleId"));
+            } else if (user.getXfUserId() == 0) {
+                reply.setText(Properties.res.getString("unknownError"));
+            }
+
+            try {
+                execute(reply);
+            } catch (TelegramApiException e) {
+                logException(e);
             }
         }
 
@@ -134,9 +145,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void photoMessage(Update update, User user) {
-        PhotoSize photoSize = update.getMessage().getPhoto().stream()
-                .sorted(Comparator.comparing(PhotoSize::getFileSize).reversed())
-                .findFirst()
+        PhotoSize photoSize = update.getMessage().getPhoto().stream().max(Comparator.comparing(PhotoSize::getFileSize))
                 .orElse(null);
 
         if (photoSize != null) {
@@ -169,8 +178,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                         String caption = update.getMessage().getCaption();
                         if (caption.length() > 0)
                             forum.sendMessage(user.getXfUserId(), update.getMessage().getCaption());
-                    } catch (NullPointerException e) {
-
+                    } catch (NullPointerException ignored) {
                     }
 
                     forum.sendMessage(user.getXfUserId(), String.format("[url]%s%s[/url]", Properties.mediaurl, fileName));
@@ -182,12 +190,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                     } catch (TelegramApiException e) {
                         logException(e);
                     }
-                } catch (FileNotFoundException e) {
-                    photoFail(update);
-                    logException(e);
-                } catch (MalformedURLException e) {
-                    photoFail(update);
-                    logException(e);
                 } catch (IOException e) {
                     photoFail(update);
                     logException(e);
@@ -221,25 +223,31 @@ public class TelegramBot extends TelegramLongPollingBot {
             ReadableByteChannel rbc = Channels.newChannel(website.openStream());
             String fullFileName = timestamp + originalFileName;
             FileOutputStream fos = new FileOutputStream(Properties.saveto + "stickers/" + fullFileName);
-            Runtime.getRuntime().exec(String.format("%s -i %s %s", Properties.ffmpeg, Properties.saveto + "stickers/" + fullFileName, Properties.saveto + "stickers/" + originalFileName + ".png"));
+            Runtime.getRuntime().exec(String.format(
+                    "%s -i %s %s",
+                    Properties.ffmpeg,
+                    Properties.saveto + "stickers/" + fullFileName,
+                    Properties.saveto + "stickers/" + originalFileName + ".png")
+            );
             fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+
             XenForo forum = new XenForo(Properties.db_host, Properties.db_user, Properties.db_password);
-            forum.sendMessage(user.getXfUserId(), String.format("[sticker]%sstickers/%s[/sticker]", Properties.mediaurl, originalFileName + ".png"));
+            forum.sendMessage(
+                    user.getXfUserId(),
+                    String.format("[sticker]%sstickers/%s[/sticker]", Properties.mediaurl, originalFileName + ".png")
+            );
             forum.close();
-        } catch (TelegramApiException e) {
-            logException(e);
-        } catch (FileNotFoundException e) {
-            logException(e);
-        } catch (MalformedURLException e) {
-            logException(e);
-        } catch (IOException e) {
+        } catch (TelegramApiException | IOException e) {
             logException(e);
         }
     }
 
     private String convertLinks(String message) {
         if (message.toLowerCase().contains("http")) {
-            return message.replaceAll("(http|https)://([\\w_-]+(?:(?:\\.[\\w_-]+)+))([\\w.,@?^=%&:/~+#-]*[\\w@?^=%&/~+#-])?", "[url]$1://$2$3[/url]");
+            return message.replaceAll(
+                    "(http|https)://([\\w_-]+(?:(?:\\.[\\w_-]+)+))([\\w.,@?^=%&:/~+#-]*[\\w@?^=%&/~+#-])?",
+                    "[url]$1://$2$3[/url]"
+            );
         }
         return message;
     }
@@ -266,9 +274,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
 
         if (s.toLowerCase().contains("[media=youtube]") && s.toLowerCase().contains("[/media]")) {
-            s = s.replaceAll("(?i)\\[media=youtube\\](id=)?([A-Za-z0-9]+);?(.*?)\\[/media\\]", "https://www.youtube.com/watch?v=$2");
+            s = s.replaceAll(
+                    "(?i)\\[media=youtube\\](id=)?([A-Za-z0-9]+);?(.*?)\\[/media\\]",
+                    "https://www.youtube.com/watch?v=$2"
+            );
         }
-
 
         return s;
     }
