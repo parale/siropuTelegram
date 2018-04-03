@@ -72,7 +72,7 @@ public class Properties {
             properties.setProperty("settings_table", bufferedReader.readLine());
             System.out.println("Clients list table name (example: transport_clients):");
             properties.setProperty("users_table", bufferedReader.readLine());
-            System.out.println("siropuTelegram.XenForo.siropuTelegram.XenForo tables prefix (default: xf_):");
+            System.out.println("XenForo tables prefix (default: xf_):");
             properties.setProperty("xf_prefix", bufferedReader.readLine());
             System.out.println("Telegram bot token api:");
             properties.setProperty("bot_token", bufferedReader.readLine());

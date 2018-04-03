@@ -6,7 +6,6 @@ import org.telegram.telegrambots.api.objects.File;
 import org.telegram.telegrambots.api.objects.PhotoSize;
 import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.api.objects.stickers.Sticker;
-import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
 import siropuTelegram.XenForo.Post;
 import siropuTelegram.XenForo.XenForo;
@@ -20,9 +19,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Pattern;
 
-class TelegramBot extends TelegramLongPollingBot {
+class TelegramBot extends AbstractBot {
     private Logger LOGGER = Solution.LOGGER;
     private ChatUpdater chatUpdater;
 
@@ -35,7 +33,8 @@ class TelegramBot extends TelegramLongPollingBot {
     public synchronized void replyTo(long chat_id, String text) {
         SendMessage message = new SendMessage();
         message.setChatId(chat_id);
-        message.setText(cutBbTag(text));
+        message.setParseMode("html");
+        message.setText(cutTags(text));
         try {
             execute(message);
         } catch (TelegramApiException e) {
@@ -261,13 +260,13 @@ class TelegramBot extends TelegramLongPollingBot {
                 String link = Properties.forumurl + "threads/" + post.getThread_id() + "/post-" + post.getPost_id();
 
                 String message =
-                        Properties.res.getString("author") + ": " + post.getAuthor() +
-                                "\n" +
+                        "<b>" + Properties.res.getString("author") + ":</b> " + post.getAuthor() +
+                                "\n\n" +
                                 post.getMessage() +
                                 "\n" +
-                                Properties.res.getString("link") + ": " + link;
+                                Properties.res.getString("link") + ": " + link + "\n\n";
 
-                replyTo(update.getMessage().getChatId(), cutAllBbTags(cutBbTag(message)));
+                replyTo(update.getMessage().getChatId(), cutTags(message));
             }
         } else {
             replyTo(update.getMessage().getChatId(), Properties.res.getString("noNewPosts"));
@@ -282,64 +281,6 @@ class TelegramBot extends TelegramLongPollingBot {
             );
         }
         return message;
-    }
-
-    private String cutBbTag(String s) {
-        if (s.toLowerCase().contains("[/url]")) {
-            if (s.toLowerCase().contains("[/url]")) {
-                s = s.replaceAll(
-                        "(?i)\\[url(=(.*?))?\\](.*?)\\[/url\\]",
-                        "$2 $3"
-                );
-            }
-        }
-
-        if (s.toLowerCase().contains("[sticker]") && s.toLowerCase().contains("[/sticker]")) {
-            s = s.replaceAll("(?i)" + Pattern.quote("[sticker]"), "");
-            s = s.replaceAll("(?i)" + Pattern.quote("[/sticker]"), "");
-        }
-
-        if (s.toLowerCase().contains("[i]") && s.toLowerCase().contains("[/i]")) {
-            s = s.replaceAll("(?i)" + Pattern.quote("[i]"), "");
-            s = s.replaceAll("(?i)" + Pattern.quote("[/i]"), "");
-        }
-
-        if (s.toLowerCase().contains("[b]") && s.toLowerCase().contains("[/b]")) {
-            s = s.replaceAll("(?i)" + Pattern.quote("[b]"), "");
-            s = s.replaceAll("(?i)" + Pattern.quote("[/b]"), "");
-        }
-
-        if (s.toLowerCase().contains("[/attach]")) {
-            if (s.toLowerCase().contains("[/attach]")) {
-                s = s.replaceAll(
-                        "(?i)\\[attach(.*?)?\\](.*?)\\[/attach\\]",
-                        Properties.forumurl + "attachments/$2/"
-                );
-            }
-        }
-
-        if (s.toLowerCase().contains("[media=youtube]") && s.toLowerCase().contains("[/media]")) {
-            s = s.replaceAll(
-                    "(?i)\\[media=youtube\\](id=)?([A-Za-z0-9]+);?(.*?)\\[/media\\]",
-                    "https://www.youtube.com/watch?v=$2"
-            );
-        }
-
-        return s;
-    }
-
-    private String cutAllBbTags(String s) {
-        return s.replaceAll("(?i)(\\[(\\/?)(.*?\\]))", "");
-    }
-
-    @Override
-    public String getBotUsername() {
-        return Properties.bot_username;
-    }
-
-    @Override
-    public String getBotToken() {
-        return Properties.bot_token;
     }
 
     private void logException(Exception e) {
