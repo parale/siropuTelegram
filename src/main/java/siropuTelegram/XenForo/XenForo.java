@@ -6,6 +6,7 @@ import siropuTelegram.User;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -169,14 +170,49 @@ public class XenForo {
         }
     }
 
+    public ArrayList<Post> whatsNew() {
+        ResultSet result;
+
+        int date = timestamp() - 86400;
+        // honestly, mysql is a hell
+        // all hail our lord and saviour stackoverflow
+        // https://stackoverflow.com/questions/1313120/retrieving-the-last-record-in-each-group-mysql
+        result = query("SELECT p1.post_id, p1.thread_id, p1.username, p1.message\n" +
+                "FROM " + Properties.xf_prefix + "post p1\n" +
+                "INNER JOIN (SELECT thread_id, MAX(pi.post_id) AS maxpostid\n" +
+                "            FROM " + Properties.xf_prefix + "post pi GROUP BY pi.thread_id) p2\n" +
+                "  ON (p1.post_id = p2.maxpostid)\n" +
+                "WHERE p1.post_date >= " + date + " ORDER BY post_id DESC LIMIT 5;");
+        ArrayList<Post> posts = new ArrayList<>();
+        if (result != null) {
+            try {
+                while (result.next()) {
+                    posts.add(new Post(
+                            result.getInt(1),
+                            result.getInt(2),
+                            result.getString(3),
+                            result.getString(4))
+                    );
+                }
+
+                Collections.reverse(posts);
+                return posts;
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, e.toString(), e);
+                return null;
+            }
+        } else {
+            return null;
+        }
+    }
+
     public void sendMessage(int user, String message) {
         if (Properties.dev.equals("0")) {
-            String time = String.valueOf(System.currentTimeMillis()).substring(0, 10);
             try {
                 PreparedStatement statement = con.prepareStatement("insert into " + Properties.xf_prefix + "siropu_shoutbox_shout (shout_user_id, shout_message, shout_date) values (?, ?, ?)");
                 statement.setInt(1, user);
                 statement.setString(2, message);
-                statement.setInt(3, Integer.valueOf(time));
+                statement.setInt(3, timestamp());
                 statement.executeUpdate();
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, e.toString(), e);
@@ -326,5 +362,9 @@ public class XenForo {
             LOGGER.log(Level.SEVERE, e.toString(), e);
             System.exit(1);
         }
+    }
+
+    private int timestamp() {
+        return Integer.valueOf(String.valueOf(System.currentTimeMillis()).substring(0, 10));
     }
 }

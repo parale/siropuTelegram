@@ -8,6 +8,7 @@ import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.api.objects.stickers.Sticker;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
+import siropuTelegram.XenForo.Post;
 import siropuTelegram.XenForo.XenForo;
 
 import java.io.FileOutputStream;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -53,6 +55,7 @@ class TelegramBot extends TelegramLongPollingBot {
 
         if (forum.isUserActive(user.getTelegramUserName())) {
             user.setXfUserId(forum.getActiveUserId(user.getTelegramUserName()));
+
             if (user.getXfUserId() > 0) {
                 // photos
                 if (update.hasMessage() && update.getMessage().hasPhoto()) {
@@ -74,7 +77,11 @@ class TelegramBot extends TelegramLongPollingBot {
             } else if (update.getMessage().getText().contentEquals("/stop")) {
                 stopMessage(update, user);
             } else if (!update.getMessage().getText().isEmpty() && forum.isUserActive(user.getTelegramUserName())) {
-                textMessage(update, user);
+                if (update.getMessage().getText().contentEquals("/new")) {
+                    whatsNew(update, user);
+                } else {
+                    textMessage(update, user);
+                }
             }
         }
 
@@ -242,6 +249,31 @@ class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    private void whatsNew(Update update, User user) {
+        XenForo forum = new XenForo(Properties.db_host, Properties.db_user, Properties.db_password);
+        ArrayList<Post> posts = forum.whatsNew();
+        forum.close();
+
+        if (posts.size() > 0) {
+            replyTo(update.getMessage().getChatId(), Properties.res.getString("newPosts"));
+
+            for (Post post : posts) {
+                String link = Properties.forumurl + "threads/" + post.getThread_id() + "/post-" + post.getPost_id();
+
+                String message =
+                        Properties.res.getString("author") + ": " + post.getAuthor() +
+                                "\n" +
+                                post.getMessage() +
+                                "\n" +
+                                Properties.res.getString("link") + ": " + link;
+
+                replyTo(update.getMessage().getChatId(), cutAllBbTags(cutBbTag(message)));
+            }
+        } else {
+            replyTo(update.getMessage().getChatId(), Properties.res.getString("noNewPosts"));
+        }
+    }
+
     private String convertLinks(String message) {
         if (message.toLowerCase().contains("http")) {
             return message.replaceAll(
@@ -253,9 +285,13 @@ class TelegramBot extends TelegramLongPollingBot {
     }
 
     private String cutBbTag(String s) {
-        if (s.toLowerCase().contains("[url]") && s.toLowerCase().contains("[/url]")) {
-            s = s.replaceAll("(?i)" + Pattern.quote("[url]"), "");
-            s = s.replaceAll("(?i)" + Pattern.quote("[/url]"), "");
+        if (s.toLowerCase().contains("[/url]")) {
+            if (s.toLowerCase().contains("[/url]")) {
+                s = s.replaceAll(
+                        "(?i)\\[url(=(.*?))?\\](.*?)\\[/url\\]",
+                        "$2 $3"
+                );
+            }
         }
 
         if (s.toLowerCase().contains("[sticker]") && s.toLowerCase().contains("[/sticker]")) {
@@ -273,6 +309,15 @@ class TelegramBot extends TelegramLongPollingBot {
             s = s.replaceAll("(?i)" + Pattern.quote("[/b]"), "");
         }
 
+        if (s.toLowerCase().contains("[/attach]")) {
+            if (s.toLowerCase().contains("[/attach]")) {
+                s = s.replaceAll(
+                        "(?i)\\[attach(.*?)?\\](.*?)\\[/attach\\]",
+                        Properties.forumurl + "attachments/$2/"
+                );
+            }
+        }
+
         if (s.toLowerCase().contains("[media=youtube]") && s.toLowerCase().contains("[/media]")) {
             s = s.replaceAll(
                     "(?i)\\[media=youtube\\](id=)?([A-Za-z0-9]+);?(.*?)\\[/media\\]",
@@ -281,6 +326,10 @@ class TelegramBot extends TelegramLongPollingBot {
         }
 
         return s;
+    }
+
+    private String cutAllBbTags(String s) {
+        return s.replaceAll("(?i)(\\[(\\/?)(.*?\\]))", "");
     }
 
     @Override
