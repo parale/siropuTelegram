@@ -198,12 +198,20 @@ public class XenForo {
         // honestly, mysql is a hell
         // all hail our lord and saviour stackoverflow
         // https://stackoverflow.com/questions/1313120/retrieving-the-last-record-in-each-group-mysql
+        String exclude = "";
+        if (Properties.exclude_nodes != null) {
+            exclude = "AND thread.node_id NOT IN (" + Properties.exclude_nodes + ")";
+        }
+
+        // i don't want to see mysql ever again
         result = query("SELECT p1.post_id, p1.thread_id, p1.username, p1.message\n" +
                 "FROM " + Properties.xf_prefix + "post p1\n" +
-                "INNER JOIN (SELECT thread_id, MAX(pi.post_id) AS maxpostid\n" +
-                "            FROM " + Properties.xf_prefix + "post pi GROUP BY pi.thread_id) p2\n" +
+                "INNER JOIN (SELECT pi.thread_id, MAX(pi.post_id) AS maxpostid, thread.node_id\n" +
+                "            FROM " + Properties.xf_prefix + "post pi join " + Properties.xf_prefix + "thread as thread on pi.thread_id = thread.thread_id\n" +
+                "            WHERE pi.post_date >= " + date + " AND pi.message_state = 'visible' AND pi.post_id > " + lastPostId + "  " + exclude + " GROUP BY pi.thread_id) p2\n" +
                 "  ON (p1.post_id = p2.maxpostid)\n" +
-                "WHERE p1.post_date >= " + date + " AND p1.post_id > " + lastPostId + " ORDER BY post_id DESC LIMIT 5;");
+                " ORDER BY post_id DESC LIMIT 5;");
+
         ArrayList<Post> posts = new ArrayList<>();
         if (result != null) {
             try {

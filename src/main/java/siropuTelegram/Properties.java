@@ -12,7 +12,7 @@ public class Properties {
 
     public static String db_host, db_user, db_password, settings_table, users_table, xf_prefix;
     public static String bot_token, bot_username;
-    public static String saveto, mediaurl, dev, sqlconnections, forumurl;
+    public static String saveto, mediaurl, dev, sqlconnections, forumurl, exclude_nodes;
     public static String ffmpeg;
     private static String version;
 
@@ -50,6 +50,7 @@ public class Properties {
         res = ResourceBundle.getBundle("locale." + properties.getProperty("lang"));
         forumurl = properties.getProperty("forumurl");
         version = properties.getProperty("version");
+        exclude_nodes = properties.getProperty("exclude_nodes");
         fileInputStream.close();
 
         checkPropertiesVersion();
@@ -92,6 +93,7 @@ public class Properties {
             properties.setProperty("dev", "0");
             properties.setProperty("lang", "en");
             properties.setProperty("version", "1");
+            properties.setProperty("exclude_nodes", "");
 
             properties.store(fileOutputStream, null);
             fileOutputStream.close();
@@ -112,7 +114,7 @@ public class Properties {
             ver = 0;
         }
 
-        if (ver < 2) {
+        if (ver < 3) {
             FileOutputStream fileOutputStream = new FileOutputStream("bot.properties");
 
             if (ver < 1) {
@@ -124,14 +126,17 @@ public class Properties {
                 bufferedReader.close();
 
                 properties.setProperty("version", "1");
-
-                setProperties();
             }
 
-            XenForo forum = new XenForo();
-            forum.updateTables(2);
+            if (ver < 2) {
+                XenForo forum = new XenForo();
+                forum.updateTables(2);
 
-            properties.setProperty("version", "2");
+                properties.setProperty("version", "2");
+            }
+
+            properties.setProperty("exclude_nodes", "");
+            properties.setProperty("version", "3");
 
             properties.store(fileOutputStream, null);
             setProperties();

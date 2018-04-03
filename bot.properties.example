@@ -11,8 +11,10 @@ mediaurl=https\://forum.com/media/
 xf_prefix=xf_
 lang=en
 ffmpeg=ffmpeg
+# don't announce threads/posts from this nodes, separate by comma
+exlucde_nodes=15,30
 # print messages received by bot to the system console
 dev=0
 # keep as is
-version=2
+version=3
 sqlconnections=0
