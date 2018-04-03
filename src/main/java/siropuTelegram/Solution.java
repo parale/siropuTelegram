@@ -25,7 +25,7 @@ public class Solution {
             System.exit(1);
         }
 
-        XenForo forum = new XenForo(Properties.db_host, Properties.db_user, Properties.db_password);
+        XenForo forum = new XenForo();
         forum.createTables();
         forum.checkUserField();
         forum.close();

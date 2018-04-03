@@ -48,7 +48,7 @@ class TelegramBot extends TelegramLongPollingBot {
             chatUpdater.start();
         }
 
-        XenForo forum = new XenForo(Properties.db_host, Properties.db_user, Properties.db_password);
+        XenForo forum = new XenForo();
 
         User user = new User();
         user.setTelegramUserName(update.getMessage().getChat().getUserName());
@@ -93,7 +93,7 @@ class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void textMessage(Update update, User user) {
-        XenForo forum = new XenForo(Properties.db_host, Properties.db_user, Properties.db_password);
+        XenForo forum = new XenForo();
 
         if (update.getMessage().isReply()) {
             forum.sendMessage(user.getXfUserId(), prepareMessage("[i]\"" + update.getMessage().getReplyToMessage().getText() + "\"[/i] "));
@@ -105,7 +105,7 @@ class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void startMessage(Update update, User user) {
-        XenForo forum = new XenForo(Properties.db_host, Properties.db_user, Properties.db_password);
+        XenForo forum = new XenForo();
         user.setXfUserId(forum.getUserIdByTelegram(user.getTelegramUserName()));
         if (!forum.isUserActive(user.getTelegramUserName())) {
             SendMessage reply = new SendMessage();
@@ -119,7 +119,7 @@ class TelegramBot extends TelegramLongPollingBot {
                 }
             } else if (user.getXfUserId() == -1) {
                 reply.setText(Properties.res.getString("doubleId"));
-            } else if (user.getXfUserId() == 0) {
+            } else {
                 reply.setText(Properties.res.getString("unknownError"));
             }
 
@@ -134,7 +134,7 @@ class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void stopMessage(Update update, User user) {
-        XenForo forum = new XenForo(Properties.db_host, Properties.db_user, Properties.db_password);
+        XenForo forum = new XenForo();
         if (forum.isUserActive(user.getTelegramUserName())) {
             if (forum.deleteUser(user.getTelegramUserName())) {
                 SendMessage reply = new SendMessage();
@@ -180,7 +180,7 @@ class TelegramBot extends TelegramLongPollingBot {
                     FileOutputStream fos = new FileOutputStream(Properties.saveto + fileName);
                     fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
 
-                    XenForo forum = new XenForo(Properties.db_host, Properties.db_user, Properties.db_password);
+                    XenForo forum = new XenForo();
                     try {
                         String caption = update.getMessage().getCaption();
                         if (caption.length() > 0)
@@ -238,7 +238,7 @@ class TelegramBot extends TelegramLongPollingBot {
             );
             fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
 
-            XenForo forum = new XenForo(Properties.db_host, Properties.db_user, Properties.db_password);
+            XenForo forum = new XenForo();
             forum.sendMessage(
                     user.getXfUserId(),
                     String.format("[sticker]%sstickers/%s[/sticker]", Properties.mediaurl, originalFileName + ".png")
@@ -250,8 +250,8 @@ class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void whatsNew(Update update, User user) {
-        XenForo forum = new XenForo(Properties.db_host, Properties.db_user, Properties.db_password);
-        ArrayList<Post> posts = forum.whatsNew();
+        XenForo forum = new XenForo();
+        ArrayList<Post> posts = forum.whatsNew(user);
         forum.close();
 
         if (posts.size() > 0) {

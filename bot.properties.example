@@ -14,5 +14,5 @@ ffmpeg=ffmpeg
 # print messages received by bot to the system console
 dev=0
 # keep as is
-version=1
+version=2
 sqlconnections=0

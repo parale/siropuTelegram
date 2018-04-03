@@ -30,6 +30,14 @@ public class XenForo {
         connect();
     }
 
+    public XenForo() {
+        this.host = Properties.db_host;
+        this.user = Properties.db_user;
+        this.password = Properties.db_password;
+
+        connect();
+    }
+
     public void close() {
         disconnect();
     }
@@ -170,8 +178,21 @@ public class XenForo {
         }
     }
 
-    public ArrayList<Post> whatsNew() {
+    public ArrayList<Post> whatsNew(User user) {
         ResultSet result;
+
+        int lastPostId = 0;
+        result = query("SELECT last_post_id FROM " + Properties.users_table + " WHERE xf_user_id = " + user.getXfUserId());
+        if (result != null) {
+            try {
+                if (result.next()) {
+                    lastPostId = result.getInt(1);
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
 
         int date = timestamp() - 86400;
         // honestly, mysql is a hell
@@ -182,7 +203,7 @@ public class XenForo {
                 "INNER JOIN (SELECT thread_id, MAX(pi.post_id) AS maxpostid\n" +
                 "            FROM " + Properties.xf_prefix + "post pi GROUP BY pi.thread_id) p2\n" +
                 "  ON (p1.post_id = p2.maxpostid)\n" +
-                "WHERE p1.post_date >= " + date + " ORDER BY post_id DESC LIMIT 5;");
+                "WHERE p1.post_date >= " + date + " AND p1.post_id > " + lastPostId + " ORDER BY post_id DESC LIMIT 5;");
         ArrayList<Post> posts = new ArrayList<>();
         if (result != null) {
             try {
@@ -193,6 +214,11 @@ public class XenForo {
                             result.getString(3),
                             result.getString(4))
                     );
+                }
+
+                if (posts.size() > 0) {
+                    lastPostId = posts.get(0).getPost_id();
+                    update("UPDATE " + Properties.users_table + " SET last_post_id = " + lastPostId + " WHERE xf_user_id = " + user.getXfUserId());
                 }
 
                 Collections.reverse(posts);
@@ -338,7 +364,8 @@ public class XenForo {
                 statement.executeUpdate("CREATE TABLE `" + Properties.users_table + "` (\n" +
                         "  `xf_user_id` int(11) NOT NULL,\n" +
                         "  `telegram_user_id` varchar(32) NOT NULL,\n" +
-                        "  `chat_id` mediumtext\n" +
+                        "  `chat_id` mediumtext,\n" +
+                        "  `last_post_id` int(11) DEFAULT NULL\n" +
                         ")");
                 statement.executeUpdate("CREATE TABLE `" + Properties.settings_table + "` (\n" +
                         "  `name` varchar(32) NOT NULL,\n" +
@@ -366,5 +393,17 @@ public class XenForo {
 
     private int timestamp() {
         return Integer.valueOf(String.valueOf(System.currentTimeMillis()).substring(0, 10));
+    }
+
+    public void updateTables(int ver) {
+        if (ver == 2) {
+            try {
+                Statement statement = con.createStatement();
+                statement.executeUpdate("ALTER TABLE " + Properties.users_table + " ADD last_post_id INT NULL");
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, e.toString(), e);
+                System.exit(1);
+            }
+        }
     }
 }

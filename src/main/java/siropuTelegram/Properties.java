@@ -1,5 +1,7 @@
 package siropuTelegram;
 
+import siropuTelegram.XenForo.XenForo;
+
 import java.io.*;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
@@ -110,21 +112,30 @@ public class Properties {
             ver = 0;
         }
 
-        if (ver < 1) {
+        if (ver < 2) {
             FileOutputStream fileOutputStream = new FileOutputStream("bot.properties");
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
 
-            System.out.println("Forum url (example: https://forum.com/):");
-            properties.setProperty("forumurl", bufferedReader.readLine());
+            if (ver < 1) {
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
 
-            bufferedReader.close();
+                System.out.println("Forum url (example: https://forum.com/):");
+                properties.setProperty("forumurl", bufferedReader.readLine());
 
-            properties.setProperty("version", "1");
+                bufferedReader.close();
+
+                properties.setProperty("version", "1");
+
+                setProperties();
+            }
+
+            XenForo forum = new XenForo();
+            forum.updateTables(2);
+
+            properties.setProperty("version", "2");
 
             properties.store(fileOutputStream, null);
-            fileOutputStream.close();
-
             setProperties();
+            fileOutputStream.close();
         }
     }
 }
