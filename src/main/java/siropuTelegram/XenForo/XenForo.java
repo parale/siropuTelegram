@@ -1,18 +1,14 @@
 package siropuTelegram.XenForo;
 
 import siropuTelegram.Properties;
-import siropuTelegram.Solution;
 import siropuTelegram.User;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Objects;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class XenForo {
-    private Logger LOGGER = Solution.LOGGER;
     private Connection con = null;
 
     private static int connections = 0;
@@ -20,15 +16,6 @@ public class XenForo {
     private String host;
     private String user;
     private String password;
-
-    // assign db host, username and password upon creating
-    public XenForo(String host, String user, String password) {
-        this.host = host;
-        this.user = user;
-        this.password = password;
-
-        connect();
-    }
 
     public XenForo() {
         this.host = Properties.db_host;
@@ -50,8 +37,8 @@ public class XenForo {
                 System.out.println("+ " + connections + " " + java.lang.Thread.currentThread().getStackTrace()[2]);
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Can't connect to the database.");
-            LOGGER.log(Level.SEVERE, e.toString(), e);
+            siropuTelegram.Logger.logSevere("Can't connect to the database.");
+            siropuTelegram.Logger.logException(e);
         }
     }
 
@@ -64,8 +51,8 @@ public class XenForo {
                     System.out.println("- " + connections + " " + java.lang.Thread.currentThread().getStackTrace()[2]);
                 }
             } catch (SQLException e) {
-                LOGGER.log(Level.SEVERE, "Can't disconnect from the database.");
-                LOGGER.log(Level.SEVERE, e.toString(), e);
+                siropuTelegram.Logger.logSevere("Can't disconnect from the database.");
+                siropuTelegram.Logger.logException(e);
             }
         }
     }
@@ -76,19 +63,15 @@ public class XenForo {
             statement = con.createStatement();
             return statement.executeQuery(sql);
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
+            siropuTelegram.Logger.logException(e);
             return null;
         }
     }
 
-    private void update(String sql) {
+    private void update(String sql) throws SQLException {
         Statement statement;
-        try {
-            statement = con.createStatement();
-            statement.executeUpdate(sql);
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
-        }
+        statement = con.createStatement();
+        statement.executeUpdate(sql);
     }
 
     public ArrayList<ChatMessage> getAllMessages() {
@@ -106,7 +89,7 @@ public class XenForo {
                     }
                 }
             } catch (SQLException e) {
-                LOGGER.log(Level.SEVERE, e.toString(), e);
+                siropuTelegram.Logger.logException(e);
                 return null;
             }
         }
@@ -129,7 +112,7 @@ public class XenForo {
                 update("update " + Properties.settings_table + " set value = " + Properties.lastMessageId + " where name = \"lastMessageId\"");
                 return messages;
             } catch (SQLException e) {
-                LOGGER.log(Level.SEVERE, e.toString(), e);
+                siropuTelegram.Logger.logException(e);
                 return null;
             }
         } else {
@@ -149,7 +132,7 @@ public class XenForo {
                 }
                 return null;
             } catch (SQLException e) {
-                LOGGER.log(Level.SEVERE, e.toString(), e);
+                siropuTelegram.Logger.logException(e);
                 return null;
             }
         }
@@ -170,7 +153,7 @@ public class XenForo {
 
                 return threads;
             } catch (SQLException e) {
-                LOGGER.log(Level.SEVERE, e.toString(), e);
+                siropuTelegram.Logger.logException(e);
                 return null;
             }
         } else {
@@ -204,9 +187,9 @@ public class XenForo {
         }
 
         // i don't want to see mysql ever again
-        result = query("SELECT p1.post_id, p1.thread_id, p1.username, p1.message\n" +
+        result = query("SELECT p1.post_id, p1.thread_id, p1.username, p1.message, title\n" +
                 "FROM " + Properties.xf_prefix + "post p1\n" +
-                "INNER JOIN (SELECT pi.thread_id, MAX(pi.post_id) AS maxpostid, thread.node_id\n" +
+                "INNER JOIN (SELECT pi.thread_id, MAX(pi.post_id) AS maxpostid, thread.node_id, thread.title\n" +
                 "            FROM " + Properties.xf_prefix + "post pi join " + Properties.xf_prefix + "thread as thread on pi.thread_id = thread.thread_id\n" +
                 "            WHERE pi.post_date >= " + date + " AND pi.message_state = 'visible' AND pi.post_id > " + lastPostId + "  " + exclude + " GROUP BY pi.thread_id) p2\n" +
                 "  ON (p1.post_id = p2.maxpostid)\n" +
@@ -220,19 +203,20 @@ public class XenForo {
                             result.getInt(1),
                             result.getInt(2),
                             result.getString(3),
-                            result.getString(4))
+                            result.getString(4),
+                            result.getString(5))
                     );
                 }
 
                 if (posts.size() > 0) {
-                    lastPostId = posts.get(0).getPost_id();
+                    lastPostId = posts.get(0).getPostId();
                     update("UPDATE " + Properties.users_table + " SET last_post_id = " + lastPostId + " WHERE xf_user_id = " + user.getXfUserId());
                 }
 
                 Collections.reverse(posts);
                 return posts;
             } catch (SQLException e) {
-                LOGGER.log(Level.SEVERE, e.toString(), e);
+                siropuTelegram.Logger.logException(e);
                 return null;
             }
         } else {
@@ -249,7 +233,7 @@ public class XenForo {
                 statement.setInt(3, timestamp());
                 statement.executeUpdate();
             } catch (SQLException e) {
-                LOGGER.log(Level.SEVERE, e.toString(), e);
+                siropuTelegram.Logger.logException(e);
             }
         } else {
             System.out.println(String.format("%s: %s", user, message));
@@ -264,7 +248,7 @@ public class XenForo {
 
             return result.next();
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
+            siropuTelegram.Logger.logException(e);
             return isUserActive(telegram_user_id);
         }
     }
@@ -281,7 +265,7 @@ public class XenForo {
                 return 0;
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
+            siropuTelegram.Logger.logException(e);
             return 0;
         }
     }
@@ -309,7 +293,7 @@ public class XenForo {
                 return 0;
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
+            siropuTelegram.Logger.logException(e);
             return 0;
         }
     }
@@ -323,7 +307,7 @@ public class XenForo {
             statement.executeUpdate();
             return true;
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
+            siropuTelegram.Logger.logException(e);
             return false;
         }
     }
@@ -335,7 +319,7 @@ public class XenForo {
             statement.executeUpdate();
             return true;
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
+            siropuTelegram.Logger.logException(e);
             return false;
         }
     }
@@ -356,7 +340,7 @@ public class XenForo {
                 }
                 return clients;
             } catch (SQLException e) {
-                LOGGER.log(Level.SEVERE, e.toString(), e);
+                siropuTelegram.Logger.logException(e);
                 return null;
             }
         } else {
@@ -364,24 +348,44 @@ public class XenForo {
         }
     }
 
+    public boolean isThreadExists(Thread thread) {
+        ResultSet result = query("SELECT thread_id FROM " + Properties.xf_prefix + "thread WHERE thread_id = " + thread.getId());
+        if (result != null) {
+            try {
+                if (result.next()) {
+                    int id = result.getInt(1);
+                    System.out.println(id);
+                    if (id > 0) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return true;
+    }
+
     public void createTables() {
         ResultSet result = query("show tables like \"" + Properties.users_table + "\"");
         try {
             if (!Objects.requireNonNull(result).next()) {
-                Statement statement = con.createStatement();
-                statement.executeUpdate("CREATE TABLE `" + Properties.users_table + "` (\n" +
+                update("CREATE TABLE `" + Properties.users_table + "` (\n" +
                         "  `xf_user_id` int(11) NOT NULL,\n" +
                         "  `telegram_user_id` varchar(32) NOT NULL,\n" +
                         "  `chat_id` mediumtext,\n" +
                         "  `last_post_id` int(11) DEFAULT NULL\n" +
                         ")");
-                statement.executeUpdate("CREATE TABLE `" + Properties.settings_table + "` (\n" +
+                update("CREATE TABLE `" + Properties.settings_table + "` (\n" +
                         "  `name` varchar(32) NOT NULL,\n" +
                         "  `value` varchar(32) DEFAULT NULL\n" +
                         ")");
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
+            siropuTelegram.Logger.logException(e);
             System.exit(1);
         }
     }
@@ -390,11 +394,11 @@ public class XenForo {
         ResultSet result = query("select * from " + Properties.xf_prefix + "user_field where field_id = \"telegram\"");
         try {
             if (!Objects.requireNonNull(result).next()) {
-                LOGGER.log(Level.SEVERE, "Please create custom user field \"Telegram\" in XF CP.");
+                siropuTelegram.Logger.logSevere("Please create custom user field \"Telegram\" in XF CP.");
                 System.exit(1);
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
+            siropuTelegram.Logger.logException(e);
             System.exit(1);
         }
     }
@@ -406,10 +410,23 @@ public class XenForo {
     public void updateTables(int ver) {
         if (ver == 2) {
             try {
-                Statement statement = con.createStatement();
-                statement.executeUpdate("ALTER TABLE " + Properties.users_table + " ADD last_post_id INT NULL");
+                update("ALTER TABLE " + Properties.users_table + " ADD last_post_id INT NULL");
             } catch (SQLException e) {
-                LOGGER.log(Level.SEVERE, e.toString(), e);
+                siropuTelegram.Logger.logException(e);
+                System.exit(1);
+            }
+        }
+
+        if (ver == 4) {
+            try {
+                update("CREATE TABLE " + Properties.follow_table + "\n" +
+                        "(\n" +
+                        "    xf_user_id INT NOT NULL,\n" +
+                        "    threads INT NOT NULL,\n" +
+                        "    last_post_id INT NOT NULL\n" +
+                        ");");
+            } catch (SQLException e) {
+                siropuTelegram.Logger.logException(e);
                 System.exit(1);
             }
         }

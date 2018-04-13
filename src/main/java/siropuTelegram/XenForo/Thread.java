@@ -7,13 +7,17 @@ public class Thread {
     private String title;
     private String author;
 
+    public Thread(int id) {
+        this.id = id;
+    }
+
     public Thread(int id, String title, String author) {
         this.id = id;
         this.title = title;
         this.author = author;
     }
 
-    private int getId() {
+    public int getId() {
         return id;
     }
 

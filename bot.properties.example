@@ -1,6 +1,7 @@
 bot_username=my_bot
 users_table=transport_clients
 settings_table=transport_settings
+follow_table=transport_follow
 bot_token=1111111\:AAAAAAAAAAAAAAAAA
 db_user=root
 db_password=password
@@ -11,10 +12,11 @@ mediaurl=https\://forum.com/media/
 xf_prefix=xf_
 lang=en
 ffmpeg=ffmpeg
+logging=0
 # don't announce threads/posts from this nodes, separate by comma
 exlucde_nodes=15,30
 # print messages received by bot to the system console
 dev=0
 # keep as is
-version=3
+version=4
 sqlconnections=0

@@ -1,24 +1,28 @@
 package siropuTelegram.XenForo;
 
+import siropuTelegram.Properties;
+
 public class Post {
-    private int post_id;
-    private int thread_id;
+    private int postId;
+    private int threadId;
     private String author;
     private String message;
+    private String threadTitle;
 
-    public Post(int post_id, int thread_id, String author, String message) {
-        this.post_id = post_id;
-        this.thread_id = thread_id;
+    public Post(int postId, int threadId, String author, String message, String threadTitle) {
+        this.postId = postId;
+        this.threadId = threadId;
         this.author = author;
         this.message = message;
+        this.threadTitle = threadTitle;
     }
 
-    public int getPost_id() {
-        return post_id;
+    public int getPostId() {
+        return postId;
     }
 
-    public int getThread_id() {
-        return thread_id;
+    public int getThreadId() {
+        return threadId;
     }
 
     public String getAuthor() {
@@ -27,5 +31,13 @@ public class Post {
 
     public String getMessage() {
         return message;
+    }
+
+    public String getThreadTitle() {
+        return threadTitle;
+    }
+
+    public String getUrl() {
+        return Properties.forumurl + "threads/" + getThreadId() + "/post-" + getPostId();
     }
 }

@@ -5,11 +5,8 @@ import siropuTelegram.XenForo.Thread;
 import siropuTelegram.XenForo.XenForo;
 
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 class ChatUpdater extends java.lang.Thread {
-    private Logger LOGGER = Solution.LOGGER;
     private TelegramBot bot;
 
     ChatUpdater(TelegramBot bot) {
@@ -21,13 +18,13 @@ class ChatUpdater extends java.lang.Thread {
         try {
             updateChat();
         } catch (InterruptedException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
+            Logger.logException(e);
         }
     }
 
     private void sendToClients(int authorXfId, String message) {
         ArrayList<User> clients;
-        XenForo forum = new XenForo(Properties.db_host, Properties.db_user, Properties.db_password);
+        XenForo forum = new XenForo();
         clients = forum.getClientsList();
 
         for (User user : clients) {
@@ -44,7 +41,7 @@ class ChatUpdater extends java.lang.Thread {
         ArrayList<ChatMessage> messages;
         int counter = 0;
         while (true) {
-            forum = new XenForo(Properties.db_host, Properties.db_user, Properties.db_password);
+            forum = new XenForo();
             messages = forum.getAllMessages();
 
             if (messages != null) {

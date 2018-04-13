@@ -6,22 +6,15 @@ import org.telegram.telegrambots.exceptions.TelegramApiRequestException;
 import siropuTelegram.XenForo.XenForo;
 
 import java.io.IOException;
-import java.util.logging.FileHandler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 public class Solution {
-    public static final Logger LOGGER = Logger.getLogger("Telegram bot logs");
-
     public static void main(String[] args) {
-        initFileHandler();
-
         try {
             new Properties();
+            new Logger();
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Can't read properties file.");
-            LOGGER.log(Level.SEVERE, e.toString(), e);
+            System.out.println("Can't read properties file.");
+            e.printStackTrace();
             System.exit(1);
         }
 
@@ -36,19 +29,8 @@ public class Solution {
         try {
             botsApi.registerBot(new TelegramBot());
         } catch (TelegramApiRequestException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
+            Logger.logException(e);
             System.exit(1);
-        }
-    }
-
-    private static void initFileHandler() {
-        try {
-            FileHandler fileHandler = new FileHandler("bot.log");
-            LOGGER.addHandler(fileHandler);
-            SimpleFormatter formatter = new SimpleFormatter();
-            fileHandler.setFormatter(formatter);
-        } catch (IOException e) {
-            System.out.println("Unable to create log file.");
         }
     }
 }

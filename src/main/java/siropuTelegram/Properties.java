@@ -4,14 +4,14 @@ import siropuTelegram.XenForo.XenForo;
 
 import java.io.*;
 import java.util.ResourceBundle;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class Properties {
-    private static final java.util.Properties properties = new java.util.Properties();
+    private static final String LATEST_VERSION = "4";
 
-    public static String db_host, db_user, db_password, settings_table, users_table, xf_prefix;
-    public static String bot_token, bot_username;
+    private static java.util.Properties properties = new java.util.Properties();
+
+    public static String db_host, db_user, db_password, settings_table, users_table, follow_table, xf_prefix;
+    public static String bot_token, bot_username, logging;
     public static String saveto, mediaurl, dev, sqlconnections, forumurl, exclude_nodes;
     public static String ffmpeg;
     private static String version;
@@ -22,88 +22,63 @@ public class Properties {
     public static ResourceBundle res;
 
     Properties() throws IOException {
-        try {
-            setProperties();
-        } catch (FileNotFoundException e) {
-            Logger LOGGER = Solution.LOGGER;
-            LOGGER.log(Level.SEVERE, e.toString(), e);
-            initProperties();
+        setProperties();
+    }
+
+    private static String getProperty(String key, String description) throws IOException {
+        String value = properties.getProperty(key);
+        if (value.isEmpty()) {
+            System.out.println(description);
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
+            String result = bufferedReader.readLine();
+            bufferedReader.close();
+            return result;
+        } else {
+            return value;
         }
     }
 
     private static void setProperties() throws IOException {
-        FileInputStream fileInputStream = new FileInputStream("bot.properties");
+        FileInputStream fileInputStream;
+
+        try {
+            fileInputStream = new FileInputStream("bot.properties");
+        } catch (FileNotFoundException e) {
+            new File("bot.properties");
+            fileInputStream = new FileInputStream("bot.properties");
+        }
+
         properties.load(fileInputStream);
-        db_host = properties.getProperty("db_host");
-        db_user = properties.getProperty("db_user");
-        db_password = properties.getProperty("db_password");
-        settings_table = properties.getProperty("settings_table");
-        users_table = properties.getProperty("users_table");
-        bot_token = properties.getProperty("bot_token");
-        bot_username = properties.getProperty("bot_username");
-        dev = properties.getProperty("dev");
-        saveto = properties.getProperty("saveto");
-        mediaurl = properties.getProperty("mediaurl");
-        ffmpeg = properties.getProperty("ffmpeg");
-        sqlconnections = properties.getProperty("sqlconnections");
-        xf_prefix = properties.getProperty("xf_prefix");
-        res = ResourceBundle.getBundle("locale." + properties.getProperty("lang"));
-        forumurl = properties.getProperty("forumurl");
-        version = properties.getProperty("version");
-        exclude_nodes = properties.getProperty("exclude_nodes");
+
+        db_host = getProperty("db_host", "Database address (example: hostname:port/db_name)");
+        db_user = getProperty("db_user", "Database username");
+        db_password = getProperty("db_password", "Database password");
+        xf_prefix = getProperty("xf_prefix", "XenForo tables prefix (default: xf_)");
+
+        settings_table = getProperty("settings_table", "stchat_settings");
+        users_table = getProperty("users_table", "stchat_users");
+        follow_table = getProperty("follow_table", "stchat_follow");
+
+        bot_token = getProperty("bot_token", "Telegram bot token api");
+        bot_username = getProperty("bot_username", "Telegram bot username");
+
+        dev = getProperty("dev", "0");
+
+        forumurl = getProperty("forumurl", "Forum url (example: https://forum.com/)");
+        saveto = getProperty("saveto", "Media folder (should be visible from web, e.g. /home/forum/ww/media/)");
+        mediaurl = getProperty("mediaurl", "Url to the media folder (https://hostname/media/)");
+        ffmpeg = getProperty("ffmpeg", "Ffmpeg binary path (to convert webp stickers to png)");
+
+        sqlconnections = properties.getProperty("sqlconnections", "0");
+        res = ResourceBundle.getBundle("locale." + properties.getProperty("lang", "en"));
+
+        version = properties.getProperty("version", LATEST_VERSION);
+        exclude_nodes = properties.getProperty("exclude_nodes", "");
+        logging = properties.getProperty("logging", "0");
         fileInputStream.close();
 
         checkPropertiesVersion();
     }
-
-    private static void initProperties() throws IOException {
-        File file = new File("bot.properties");
-        if (file.createNewFile()) {
-            FileOutputStream fileOutputStream = new FileOutputStream("bot.properties");
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
-
-            System.out.println("Database address (example: hostname:port/db_name):");
-            properties.setProperty("db_host", bufferedReader.readLine());
-            System.out.println("Database username:");
-            properties.setProperty("db_user", bufferedReader.readLine());
-            System.out.println("Database password:");
-            properties.setProperty("db_password", bufferedReader.readLine());
-            System.out.println("Settings table name (example: transport_settings):");
-            properties.setProperty("settings_table", bufferedReader.readLine());
-            System.out.println("Clients list table name (example: transport_clients):");
-            properties.setProperty("users_table", bufferedReader.readLine());
-            System.out.println("XenForo tables prefix (default: xf_):");
-            properties.setProperty("xf_prefix", bufferedReader.readLine());
-            System.out.println("Telegram bot token api:");
-            properties.setProperty("bot_token", bufferedReader.readLine());
-            System.out.println("Telegram bot username:");
-            properties.setProperty("bot_username", bufferedReader.readLine());
-            System.out.println("Forum url (example: https://forum.com/):");
-            properties.setProperty("forumurl", bufferedReader.readLine());
-            System.out.println("Media folder (should be visible from web):");
-            properties.setProperty("saveto", bufferedReader.readLine());
-            System.out.println("Url to the media folder (https://hostname/media/):");
-            properties.setProperty("mediaurl", bufferedReader.readLine());
-            System.out.println("Ffmpeg binary path (to convert webp stickers to png):");
-            properties.setProperty("ffmpeg", bufferedReader.readLine());
-
-            bufferedReader.close();
-
-            properties.setProperty("sqlconnections", "0");
-            properties.setProperty("dev", "0");
-            properties.setProperty("lang", "en");
-            properties.setProperty("version", "1");
-            properties.setProperty("exclude_nodes", "");
-
-            properties.store(fileOutputStream, null);
-            fileOutputStream.close();
-
-            setProperties();
-        } else {
-            throw new IOException();
-        }
-    }
-
 
     private static void checkPropertiesVersion() throws IOException {
         int ver;
@@ -114,7 +89,7 @@ public class Properties {
             ver = 0;
         }
 
-        if (ver < 3) {
+        if (ver < 4) {
             FileOutputStream fileOutputStream = new FileOutputStream("bot.properties");
 
             if (ver < 1) {
@@ -131,12 +106,22 @@ public class Properties {
             if (ver < 2) {
                 XenForo forum = new XenForo();
                 forum.updateTables(2);
+                forum.close();
 
                 properties.setProperty("version", "2");
             }
 
-            properties.setProperty("exclude_nodes", "");
-            properties.setProperty("version", "3");
+            if (ver < 3) {
+                properties.setProperty("exclude_nodes", "");
+                properties.setProperty("version", "3");
+            }
+
+            properties.setProperty("follow_table", "stchat_follow");
+            properties.setProperty("version", "4");
+
+            XenForo forum = new XenForo();
+            forum.updateTables(4);
+            forum.close();
 
             properties.store(fileOutputStream, null);
             setProperties();
