@@ -32,6 +32,7 @@ public class Properties {
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
             String result = bufferedReader.readLine();
             bufferedReader.close();
+            properties.setProperty(key, result);
             return result;
         } else {
             return value;
@@ -49,6 +50,9 @@ public class Properties {
         }
 
         properties.load(fileInputStream);
+
+        version = properties.getProperty("version", LATEST_VERSION);
+        checkPropertiesVersion();
 
         db_host = getProperty("db_host", "Database address (example: hostname:port/db_name)");
         db_user = getProperty("db_user", "Database username");
@@ -72,12 +76,14 @@ public class Properties {
         sqlconnections = properties.getProperty("sqlconnections", "0");
         res = ResourceBundle.getBundle("locale." + properties.getProperty("lang", "en"));
 
-        version = properties.getProperty("version", LATEST_VERSION);
         exclude_nodes = properties.getProperty("exclude_nodes", "");
         logging = properties.getProperty("logging", "0");
+
         fileInputStream.close();
 
-        checkPropertiesVersion();
+        FileOutputStream fileOutputStream = new FileOutputStream("bot.properties");
+        properties.store(fileOutputStream, null);
+        fileInputStream.close();
     }
 
     private static void checkPropertiesVersion() throws IOException {

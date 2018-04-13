@@ -40,7 +40,7 @@ class ChatUpdater extends java.lang.Thread {
         XenForo forum;
         ArrayList<ChatMessage> messages;
         int counter = 0;
-        while (true) {
+        while (!isInterrupted()) {
             forum = new XenForo();
             messages = forum.getAllMessages();
 
@@ -61,7 +61,7 @@ class ChatUpdater extends java.lang.Thread {
             }
 
             forum.close();
-            java.lang.Thread.sleep(1000);
+            sleep(1000);
         }
     }
 
