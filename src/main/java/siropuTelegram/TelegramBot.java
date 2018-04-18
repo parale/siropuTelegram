@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.regex.Matcher;
@@ -23,19 +24,27 @@ import java.util.regex.Pattern;
 
 class TelegramBot extends AbstractBot {
     private ChatUpdater chatUpdater;
+    private ThreadUpdater threadUpdater;
 
-    public TelegramBot() {
+    TelegramBot() {
         Logger.logInfo("Telegram bot started.");
         chatUpdater = new ChatUpdater(this);
         chatUpdater.start();
+
+        threadUpdater = new ThreadUpdater(this);
+        threadUpdater.start();
     }
 
-    public synchronized void replyTo(long chat_id, String text) {
-        SendMessage message = new SendMessage();
-        message.setChatId(chat_id);
-        message.setText(cutTags(text));
+    synchronized void replyTo(long chat_id, String text) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(chat_id);
+
+        String message = cutTags(text);
         try {
-            execute(message);
+            if (message.getBytes(StandardCharsets.UTF_8).length < 4096) {
+                sendMessage.setText(message);
+                execute(sendMessage);
+            }
         } catch (TelegramApiException e) {
             Logger.logException(e);
         }
@@ -43,7 +52,13 @@ class TelegramBot extends AbstractBot {
 
     public void onUpdateReceived(Update update) {
         if (!chatUpdater.isAlive()) {
+            chatUpdater = new ChatUpdater(this);
             chatUpdater.start();
+        }
+
+        if (!threadUpdater.isAlive()) {
+            threadUpdater = new ThreadUpdater(this);
+            threadUpdater.start();
         }
 
         XenForo forum = new XenForo();
@@ -82,12 +97,12 @@ class TelegramBot extends AbstractBot {
                     whatsNew(update, user);
                 } else if (update.getMessage().getText().startsWith("/follow")) {
                     try {
-                        //follow(update, user);
+                        follow(update, user);
                     } catch (NumberFormatException e) {
-                        //replyTo(user.getTelegramChatId(), Properties.res.getString("unknownError"));
+                        replyTo(user.getTelegramChatId(), Properties.res.getString("unknownError"));
                     }
                 } else if (update.getMessage().getText().startsWith("/unfollow")) {
-                    //unfollow(update, user);
+                    unfollow(update, user);
                 } else {
                     textMessage(update, user);
                 }
@@ -270,10 +285,10 @@ class TelegramBot extends AbstractBot {
                 String message =
                         "=====\n" +
                                 Properties.res.getString("thread") + ": " + post.getThreadTitle() + "\n" +
-                                Properties.res.getString("author") + ": " + post.getAuthor() + "\n\n" +
+                                Properties.res.getString("author") + ": " + post.getAuthor() + "\n" +
+                                Properties.res.getString("link") + ": " + post.getUrl() + "\n\n" +
                                 post.getMessage() +
-                                "\n\n" +
-                                Properties.res.getString("link") + ": " + post.getUrl();
+                                "\n\n";
 
                 replyTo(update.getMessage().getChatId(), cutTags(message));
             }
@@ -291,13 +306,21 @@ class TelegramBot extends AbstractBot {
                 int threadId = Integer.valueOf(matcher.group(1));
 
                 XenForo forum = new XenForo();
-                if (forum.isThreadExists(new Thread(threadId))) {
-                    System.out.println("yes thread");
+                Thread thread = new Thread(threadId);
+
+                if (forum.isThreadExists(thread)) {
+                    if (forum.followThread(user, thread)) {
+                        replyTo(user.getTelegramChatId(), Properties.res.getString("followSuccess"));
+                    } else {
+                        replyTo(user.getTelegramChatId(), Properties.res.getString("followFailed"));
+                    }
                 } else {
-                    System.out.println("no thread");
+                    replyTo(user.getTelegramChatId(), Properties.res.getString("followFailed"));
                 }
+
+                forum.close();
             } else {
-                replyTo(user.getTelegramChatId(), Properties.res.getString("followInvalidLink"));
+                replyTo(user.getTelegramChatId(), Properties.res.getString("followFailed"));
             }
         } else {
             replyTo(update.getMessage().getChatId(),
@@ -307,7 +330,35 @@ class TelegramBot extends AbstractBot {
     }
 
     private void unfollow(Update update, User user) {
+        String[] args = update.getMessage().getText().split(" ");
+        if (args.length > 1) {
+            Matcher matcher = Pattern.compile("\\.([0-9]*)/").matcher(args[1]);
 
+            if (matcher.find()) {
+                int threadId = Integer.valueOf(matcher.group(1));
+
+                XenForo forum = new XenForo();
+                Thread thread = new Thread(threadId);
+
+                if (forum.isThreadExists(thread)) {
+                    if (forum.unfollowThread(user, thread)) {
+                        replyTo(user.getTelegramChatId(), Properties.res.getString("unfollowSuccess"));
+                    } else {
+                        replyTo(user.getTelegramChatId(), Properties.res.getString("unfollowFailed"));
+                    }
+                } else {
+                    replyTo(user.getTelegramChatId(), Properties.res.getString("unfollowFailed"));
+                }
+
+                forum.close();
+            } else {
+                replyTo(user.getTelegramChatId(), Properties.res.getString("unfollowFailed"));
+            }
+        } else {
+            replyTo(update.getMessage().getChatId(),
+                    Properties.res.getString("unfollowHelp")
+            );
+        }
     }
 
     private String convertLinks(String message) {
@@ -317,6 +368,7 @@ class TelegramBot extends AbstractBot {
                     "[url]$1://$2$3[/url]"
             );
         }
+
         return message;
     }
 }

@@ -12,7 +12,7 @@ public class Properties {
 
     public static String db_host, db_user, db_password, settings_table, users_table, follow_table, xf_prefix;
     public static String bot_token, bot_username, logging;
-    public static String saveto, mediaurl, dev, sqlconnections, forumurl, exclude_nodes;
+    public static String saveto, mediaurl, dev, forumurl, exclude_nodes;
     public static String ffmpeg;
     private static String version;
 
@@ -73,7 +73,6 @@ public class Properties {
         mediaurl = getProperty("mediaurl", "Url to the media folder (https://hostname/media/)");
         ffmpeg = getProperty("ffmpeg", "Ffmpeg binary path (to convert webp stickers to png)");
 
-        sqlconnections = properties.getProperty("sqlconnections", "0");
         res = ResourceBundle.getBundle("locale." + properties.getProperty("lang", "en"));
 
         exclude_nodes = properties.getProperty("exclude_nodes", "");

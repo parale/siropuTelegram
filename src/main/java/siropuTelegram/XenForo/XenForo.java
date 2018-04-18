@@ -1,5 +1,6 @@
 package siropuTelegram.XenForo;
 
+import siropuTelegram.Logger;
 import siropuTelegram.Properties;
 import siropuTelegram.User;
 
@@ -10,8 +11,6 @@ import java.util.Objects;
 
 public class XenForo {
     private Connection con = null;
-
-    private static int connections = 0;
 
     private String host;
     private String user;
@@ -32,10 +31,6 @@ public class XenForo {
     private void connect() {
         try {
             con = DriverManager.getConnection("jdbc:mysql://" + host, user, password);
-            if (Properties.sqlconnections.equals("1")) {
-                connections++;
-                System.out.println("+ " + connections + " " + java.lang.Thread.currentThread().getStackTrace()[2]);
-            }
         } catch (SQLException e) {
             siropuTelegram.Logger.logSevere("Can't connect to the database.");
             siropuTelegram.Logger.logException(e);
@@ -46,10 +41,6 @@ public class XenForo {
         if (con != null) {
             try {
                 con.close();
-                if (Properties.sqlconnections.equals("1")) {
-                    connections--;
-                    System.out.println("- " + connections + " " + java.lang.Thread.currentThread().getStackTrace()[2]);
-                }
             } catch (SQLException e) {
                 siropuTelegram.Logger.logSevere("Can't disconnect from the database.");
                 siropuTelegram.Logger.logException(e);
@@ -216,12 +207,63 @@ public class XenForo {
                 Collections.reverse(posts);
                 return posts;
             } catch (SQLException e) {
-                siropuTelegram.Logger.logException(e);
+                Logger.logException(e);
                 return null;
             }
         } else {
             return null;
         }
+    }
+
+    public ArrayList<Post> getNewMessages(int lastMessageId, int xfUserId) {
+        ResultSet result;
+
+        ArrayList<Integer> threads = new ArrayList<>();
+        result = query("SELECT thread FROM " + Properties.follow_table + " WHERE xf_user_id = " + xfUserId);
+        if (result != null) {
+            try {
+                while (result.next()) {
+                    threads.add(result.getInt(1));
+                }
+            } catch (SQLException e) {
+                Logger.logException(e);
+                return null;
+            }
+        }
+
+        if (!threads.isEmpty()) {
+            ArrayList<Post> posts = new ArrayList<>();
+            for (int thread : threads) {
+                result = query(
+                        "SELECT " + Properties.xf_prefix + "post.post_id, " + Properties.xf_prefix + "post.thread_id, " + Properties.xf_prefix + "post.username, " + Properties.xf_prefix + "post.message, t.title " +
+                                "FROM " + Properties.xf_prefix + "post JOIN xf_thread t " +
+                                "ON " + Properties.xf_prefix + "post.thread_id = t.thread_id " +
+                                "WHERE " + Properties.xf_prefix + "post.thread_id = " + thread +
+                                " AND post_id > " + lastMessageId
+                );
+
+                if (result != null) {
+                    try {
+                        while (result.next()) {
+                            posts.add(new Post(
+                                    result.getInt(1),
+                                    result.getInt(2),
+                                    result.getString(3),
+                                    result.getString(4),
+                                    result.getString(5)
+                            ));
+                        }
+                    } catch (SQLException e) {
+                        Logger.logException(e);
+                        return null;
+                    }
+                }
+            }
+
+            if (!posts.isEmpty()) return posts;
+        }
+
+        return null;
     }
 
     public void sendMessage(int user, String message) {
@@ -233,7 +275,7 @@ public class XenForo {
                 statement.setInt(3, timestamp());
                 statement.executeUpdate();
             } catch (SQLException e) {
-                siropuTelegram.Logger.logException(e);
+                Logger.logException(e);
             }
         } else {
             System.out.println(String.format("%s: %s", user, message));
@@ -352,21 +394,71 @@ public class XenForo {
         ResultSet result = query("SELECT thread_id FROM " + Properties.xf_prefix + "thread WHERE thread_id = " + thread.getId());
         if (result != null) {
             try {
-                if (result.next()) {
-                    int id = result.getInt(1);
-                    System.out.println(id);
-                    if (id > 0) {
-                        return true;
-                    } else {
-                        return false;
-                    }
-                }
+                return result.next();
             } catch (SQLException e) {
-                e.printStackTrace();
+                Logger.logException(e);
+                return false;
             }
         }
 
-        return true;
+        return false;
+    }
+
+    public boolean isFollowingThread(User user, Thread thread) {
+        ResultSet result = query("SELECT * FROM " + Properties.follow_table +
+                " WHERE xf_user_id = " + user.getXfUserId() +
+                " AND thread = " + thread.getId()
+        );
+
+        if (result != null) {
+            try {
+                return result.next();
+            } catch (SQLException e) {
+                Logger.logException(e);
+            }
+        }
+
+        return false;
+    }
+
+    public boolean followThread(User user, Thread thread) {
+        if (!isFollowingThread(user, thread)) {
+            try {
+                PreparedStatement statement = con.prepareStatement(
+                        "INSERT INTO " + Properties.follow_table + " (xf_user_id, thread) VALUES (?, ?)"
+                );
+
+                statement.setInt(1, user.getXfUserId());
+                statement.setInt(2, thread.getId());
+                statement.executeUpdate();
+
+                return true;
+            } catch (SQLException e) {
+                Logger.logException(e);
+            }
+        }
+
+        return false;
+    }
+
+    public boolean unfollowThread(User user, Thread thread) {
+        if (isFollowingThread(user, thread)) {
+            try {
+                PreparedStatement statement = con.prepareStatement(
+                        "DELETE FROM " + Properties.follow_table + " WHERE xf_user_id = ? AND thread = ?"
+                );
+
+                statement.setInt(1, user.getXfUserId());
+                statement.setInt(2, thread.getId());
+                statement.executeUpdate();
+
+                return true;
+            } catch (SQLException e) {
+                Logger.logException(e);
+            }
+        }
+
+        return false;
     }
 
     public void createTables() {
@@ -383,6 +475,11 @@ public class XenForo {
                         "  `name` varchar(32) NOT NULL,\n" +
                         "  `value` varchar(32) DEFAULT NULL\n" +
                         ")");
+                update("CREATE TABLE " + Properties.follow_table + "\n" +
+                        "(\n" +
+                        "    xf_user_id INT NOT NULL,\n" +
+                        "    thread INT NOT NULL,\n" +
+                        ");");
             }
         } catch (SQLException e) {
             siropuTelegram.Logger.logException(e);
@@ -422,8 +519,7 @@ public class XenForo {
                 update("CREATE TABLE " + Properties.follow_table + "\n" +
                         "(\n" +
                         "    xf_user_id INT NOT NULL,\n" +
-                        "    threads INT NOT NULL,\n" +
-                        "    last_post_id INT NOT NULL\n" +
+                        "    thread INT NOT NULL,\n" +
                         ");");
             } catch (SQLException e) {
                 siropuTelegram.Logger.logException(e);
