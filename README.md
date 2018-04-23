@@ -10,3 +10,12 @@ To connect XenForo and Telegram accounts, create custom user field in XenForo Ad
 * Value match requirements: A-Z, 0-9, and _ only
 
 Other fields may be customized as you wish.
+
+## Prepare public directories
+Create two directories to be visible from web.
+
+* media/
+* media/stickers/
+
+## Other
+* ffmpeg is required to convert webp stickers to png files; cleanup doesn't work yet, but who cares about backend, right?

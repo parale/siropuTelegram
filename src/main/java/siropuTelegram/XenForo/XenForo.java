@@ -205,21 +205,33 @@ public class XenForo {
                 }
 
                 Collections.reverse(posts);
-                return posts;
             } catch (SQLException e) {
                 Logger.logException(e);
-                return null;
             }
-        } else {
-            return null;
+        }
+
+        return posts;
+    }
+
+    public void updateLastPostId() {
+        ResultSet result = query("SELECT post_id FROM " + Properties.xf_prefix + "post ORDER BY post_id DESC LIMIT 1");
+
+        if (result != null) {
+            try {
+                result.next();
+                Properties.lastPostId = result.getInt(1);
+            } catch (SQLException e) {
+                Logger.logException(e);
+            }
         }
     }
 
-    public ArrayList<Post> getNewMessages(int lastMessageId, int xfUserId) {
+    public ArrayList<Post> getNewMessages(User user) {
         ResultSet result;
-
         ArrayList<Integer> threads = new ArrayList<>();
-        result = query("SELECT thread FROM " + Properties.follow_table + " WHERE xf_user_id = " + xfUserId);
+        ArrayList<Post> posts = new ArrayList<>();
+
+        result = query("SELECT thread FROM " + Properties.follow_table + " WHERE xf_user_id = " + user.getXfUserId());
         if (result != null) {
             try {
                 while (result.next()) {
@@ -227,19 +239,17 @@ public class XenForo {
                 }
             } catch (SQLException e) {
                 Logger.logException(e);
-                return null;
             }
         }
 
         if (!threads.isEmpty()) {
-            ArrayList<Post> posts = new ArrayList<>();
             for (int thread : threads) {
                 result = query(
                         "SELECT " + Properties.xf_prefix + "post.post_id, " + Properties.xf_prefix + "post.thread_id, " + Properties.xf_prefix + "post.username, " + Properties.xf_prefix + "post.message, t.title " +
                                 "FROM " + Properties.xf_prefix + "post JOIN xf_thread t " +
                                 "ON " + Properties.xf_prefix + "post.thread_id = t.thread_id " +
                                 "WHERE " + Properties.xf_prefix + "post.thread_id = " + thread +
-                                " AND post_id > " + lastMessageId
+                                " AND post_id > " + Properties.lastPostId
                 );
 
                 if (result != null) {
@@ -255,15 +265,35 @@ public class XenForo {
                         }
                     } catch (SQLException e) {
                         Logger.logException(e);
-                        return null;
                     }
                 }
             }
-
-            if (!posts.isEmpty()) return posts;
         }
 
-        return null;
+        return posts;
+    }
+
+    public ArrayList<User> getFollowers() {
+        ResultSet result = query("SELECT " + Properties.follow_table + ".xf_user_id, u.chat_id" +
+                " FROM " + Properties.follow_table + " JOIN " + Properties.users_table + " u" +
+                " ON " + Properties.follow_table + ".xf_user_id = u.xf_user_id GROUP BY chat_id;");
+
+        ArrayList<User> users = new ArrayList<>();
+
+        if (result != null) {
+            try {
+                while (result.next()) {
+                    users.add(new User(
+                            result.getInt(1),
+                            result.getLong(2)
+                    ));
+                }
+            } catch (SQLException e) {
+                Logger.logException(e);
+            }
+        }
+
+        return users;
     }
 
     public void sendMessage(int user, String message) {
@@ -509,7 +539,7 @@ public class XenForo {
             try {
                 update("ALTER TABLE " + Properties.users_table + " ADD last_post_id INT NULL");
             } catch (SQLException e) {
-                siropuTelegram.Logger.logException(e);
+                e.printStackTrace();
                 System.exit(1);
             }
         }
@@ -519,10 +549,10 @@ public class XenForo {
                 update("CREATE TABLE " + Properties.follow_table + "\n" +
                         "(\n" +
                         "    xf_user_id INT NOT NULL,\n" +
-                        "    thread INT NOT NULL,\n" +
+                        "    thread INT NOT NULL\n" +
                         ");");
             } catch (SQLException e) {
-                siropuTelegram.Logger.logException(e);
+                e.printStackTrace();
                 System.exit(1);
             }
         }

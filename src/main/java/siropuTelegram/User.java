@@ -5,6 +5,14 @@ public class User {
     private long telegramChatId;
     private int xfUserId;
 
+    public User() {
+    }
+
+    public User(int xfUserId, long telegramChatId) {
+        this.xfUserId = xfUserId;
+        this.telegramChatId = telegramChatId;
+    }
+
     public long getTelegramChatId() {
         return telegramChatId;
     }

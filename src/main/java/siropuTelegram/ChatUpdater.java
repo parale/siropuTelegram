@@ -6,7 +6,7 @@ import siropuTelegram.XenForo.XenForo;
 import java.util.ArrayList;
 
 class ChatUpdater extends java.lang.Thread {
-    private TelegramBot bot;
+    protected TelegramBot bot;
 
     ChatUpdater(TelegramBot bot) {
         this.bot = bot;

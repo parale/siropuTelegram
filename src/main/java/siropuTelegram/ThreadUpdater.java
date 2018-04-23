@@ -1,5 +1,6 @@
 package siropuTelegram;
 
+import siropuTelegram.XenForo.Post;
 import siropuTelegram.XenForo.Thread;
 import siropuTelegram.XenForo.XenForo;
 
@@ -15,7 +16,10 @@ public class ThreadUpdater extends ChatUpdater {
         while (!interrupted()) {
             XenForo forum = new XenForo();
 
-            updateThreads(forum);
+            if (Properties.lastPostId == 0) forum.updateLastPostId();
+
+            newPosts(forum);
+            newThreads(forum);
 
             forum.close();
             try {
@@ -26,7 +30,7 @@ public class ThreadUpdater extends ChatUpdater {
         }
     }
 
-    private void updateThreads(XenForo forum) {
+    private void newThreads(XenForo forum) {
         ArrayList<Thread> threads = forum.getNewThreads();
 
         if (threads != null) {
@@ -40,5 +44,32 @@ public class ThreadUpdater extends ChatUpdater {
                 ));
             }
         }
+    }
+
+    private void newPosts(XenForo forum) {
+        ArrayList<User> users = forum.getFollowers();
+
+        if (!users.isEmpty()) {
+            for (User user : users) {
+                ArrayList<Post> posts = forum.getNewMessages(user);
+                if (!posts.isEmpty()) {
+                    for (Post post : posts) {
+                        String message = String.format("\uD83C\uDD95 %s «%s», %s: %s",
+                                Properties.res.getString("newPost"),
+                                post.getThreadTitle(),
+                                Properties.res.getString("author").toLowerCase(),
+                                post.getAuthor()
+                        );
+
+                        bot.replyTo(
+                                user.getTelegramChatId(),
+                                message
+                        );
+                    }
+                }
+            }
+        }
+
+        forum.updateLastPostId();
     }
 }
