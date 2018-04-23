@@ -173,7 +173,7 @@ public class XenForo {
         // all hail our lord and saviour stackoverflow
         // https://stackoverflow.com/questions/1313120/retrieving-the-last-record-in-each-group-mysql
         String exclude = "";
-        if (Properties.exclude_nodes != null) {
+        if (!Properties.exclude_nodes.isEmpty()) {
             exclude = "AND thread.node_id NOT IN (" + Properties.exclude_nodes + ")";
         }
 
