@@ -32,3 +32,6 @@ src/test/
 target/classes/META-INF/
 target/classes/locale/
 target/generated-sources/
+target/
+
+project.geany
