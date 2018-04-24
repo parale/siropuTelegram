@@ -38,6 +38,7 @@ class TelegramBot extends AbstractBot {
     synchronized void replyTo(long chat_id, String text) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(chat_id);
+        sendMessage.disableWebPagePreview();
 
         String message = cutTags(text);
         try {
@@ -252,22 +253,27 @@ class TelegramBot extends AbstractBot {
             int timestamp = (int) (System.currentTimeMillis() / 1000L);
             URL website = new URL("https://api.telegram.org/file/bot" + getBotToken() + "/" + filePath);
             ReadableByteChannel rbc = Channels.newChannel(website.openStream());
-            String fullFileName = timestamp + originalFileName;
-            FileOutputStream fos = new FileOutputStream(Properties.saveto + "stickers/" + fullFileName);
+            String webpFile = Properties.saveto + "stickers/" + originalFileName;
+            FileOutputStream fos = new FileOutputStream(webpFile);
+            String outputFile = timestamp + ".png";
+            fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+            fos.close();
+
             Runtime.getRuntime().exec(String.format(
                     "%s -i %s %s",
                     Properties.ffmpeg,
-                    Properties.saveto + "stickers/" + fullFileName,
-                    Properties.saveto + "stickers/" + originalFileName + ".png")
+                    webpFile,
+                    Properties.saveto + "stickers/" + outputFile)
             );
-            fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
 
             XenForo forum = new XenForo();
             forum.sendMessage(
                     user.getXfUserId(),
-                    String.format("[sticker]%sstickers/%s[/sticker]", Properties.mediaurl, originalFileName + ".png")
+                    String.format("[sticker]%sstickers/%s[/sticker]", Properties.mediaurl, outputFile)
             );
             forum.close();
+
+            Runtime.getRuntime().exec("rm " + webpFile);
         } catch (TelegramApiException | IOException e) {
             Logger.logException(e);
         }

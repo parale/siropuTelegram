@@ -1,20 +1,15 @@
 package siropuTelegram;
 
-import siropuTelegram.XenForo.XenForo;
-
 import java.io.*;
 import java.util.ResourceBundle;
 
 public class Properties {
-    private static final String LATEST_VERSION = "4";
-
     private static java.util.Properties properties = new java.util.Properties();
 
     public static String db_host, db_user, db_password, settings_table, users_table, follow_table, xf_prefix;
     public static String bot_token, bot_username, logging;
     public static String saveto, mediaurl, dev, forumurl, exclude_nodes;
     public static String ffmpeg;
-    private static String version;
 
     public static int lastMessageId = 0;
     public static int lastThreadId = 0;
@@ -53,7 +48,6 @@ public class Properties {
 
         properties.load(fileInputStream);
 
-        version = properties.getProperty("version", LATEST_VERSION);
         db_host = getProperty("db_host", "Database address (example: hostname:port/db_name)");
         db_user = getProperty("db_user", "Database username");
         db_password = getProperty("db_password", "Database password");
@@ -62,8 +56,6 @@ public class Properties {
         settings_table = properties.getProperty("settings_table", "stchat_settings");
         users_table = properties.getProperty("users_table", "stchat_users");
         follow_table = properties.getProperty("follow_table", "stchat_follow");
-
-        checkPropertiesVersion();
 
         bot_token = getProperty("bot_token", "Telegram bot token api");
         bot_username = getProperty("bot_username", "Telegram bot username");
@@ -106,54 +98,5 @@ public class Properties {
 
         properties.store(fileOutputStream, null);
         fileOutputStream.close();
-    }
-
-    private static void checkPropertiesVersion() throws IOException {
-        int ver;
-
-        try {
-            ver = Integer.parseInt(version);
-        } catch (NumberFormatException e) {
-            ver = 0;
-        }
-
-        if (ver < 4) {
-            FileOutputStream fileOutputStream = new FileOutputStream("bot.properties");
-
-            if (ver < 1) {
-                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
-
-                System.out.println("Forum url (example: https://forum.com/):");
-                properties.setProperty("forumurl", bufferedReader.readLine());
-
-                bufferedReader.close();
-
-                properties.setProperty("version", "1");
-            }
-
-            if (ver < 2) {
-                XenForo forum = new XenForo();
-                forum.updateTables(2);
-                forum.close();
-
-                properties.setProperty("version", "2");
-            }
-
-            if (ver < 3) {
-                properties.setProperty("exclude_nodes", "");
-                properties.setProperty("version", "3");
-            }
-
-            properties.setProperty("follow_table", "stchat_follow");
-            properties.setProperty("version", "4");
-
-            XenForo forum = new XenForo();
-            forum.updateTables(4);
-            forum.close();
-
-            properties.store(fileOutputStream, null);
-            setProperties();
-            fileOutputStream.close();
-        }
     }
 }

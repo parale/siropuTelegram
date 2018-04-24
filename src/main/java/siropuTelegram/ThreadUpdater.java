@@ -57,8 +57,8 @@ public class ThreadUpdater extends ChatUpdater {
                         String message = String.format("\uD83C\uDD95 %s «%s», %s: %s",
                                 Properties.res.getString("newPost"),
                                 post.getThreadTitle(),
-                                Properties.res.getString("author").toLowerCase(),
-                                post.getAuthor()
+                                Properties.res.getString("link").toLowerCase(),
+                                post.getUrl()
                         );
 
                         bot.replyTo(

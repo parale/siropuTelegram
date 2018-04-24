@@ -12,15 +12,7 @@ import java.util.Objects;
 public class XenForo {
     private Connection con = null;
 
-    private String host;
-    private String user;
-    private String password;
-
     public XenForo() {
-        this.host = Properties.db_host;
-        this.user = Properties.db_user;
-        this.password = Properties.db_password;
-
         connect();
     }
 
@@ -30,7 +22,11 @@ public class XenForo {
 
     private void connect() {
         try {
-            con = DriverManager.getConnection("jdbc:mysql://" + host, user, password);
+            con = DriverManager.getConnection("jdbc:mysql://" +
+                            Properties.db_host,
+                    Properties.db_user,
+                    Properties.db_password
+            );
         } catch (SQLException e) {
             siropuTelegram.Logger.logSevere("Can't connect to the database.");
             siropuTelegram.Logger.logException(e);
@@ -501,10 +497,28 @@ public class XenForo {
                         "  `chat_id` mediumtext,\n" +
                         "  `last_post_id` int(11) DEFAULT NULL\n" +
                         ")");
+            }
+        } catch (SQLException e) {
+            siropuTelegram.Logger.logException(e);
+            System.exit(1);
+        }
+
+        result = query("show tables like \"" + Properties.settings_table + "\"");
+        try {
+            if (!Objects.requireNonNull(result).next()) {
                 update("CREATE TABLE `" + Properties.settings_table + "` (\n" +
                         "  `name` varchar(32) NOT NULL,\n" +
                         "  `value` varchar(32) DEFAULT NULL\n" +
                         ")");
+            }
+        } catch (SQLException e) {
+            siropuTelegram.Logger.logException(e);
+            System.exit(1);
+        }
+
+        result = query("show tables like \"" + Properties.follow_table + "\"");
+        try {
+            if (!Objects.requireNonNull(result).next()) {
                 update("CREATE TABLE " + Properties.follow_table + "\n" +
                         "(\n" +
                         "    xf_user_id INT NOT NULL,\n" +
@@ -532,29 +546,5 @@ public class XenForo {
 
     private int timestamp() {
         return Integer.valueOf(String.valueOf(System.currentTimeMillis()).substring(0, 10));
-    }
-
-    public void updateTables(int ver) {
-        if (ver == 2) {
-            try {
-                update("ALTER TABLE " + Properties.users_table + " ADD last_post_id INT NULL");
-            } catch (SQLException e) {
-                e.printStackTrace();
-                System.exit(1);
-            }
-        }
-
-        if (ver == 4) {
-            try {
-                update("CREATE TABLE " + Properties.follow_table + "\n" +
-                        "(\n" +
-                        "    xf_user_id INT NOT NULL,\n" +
-                        "    thread INT NOT NULL\n" +
-                        ");");
-            } catch (SQLException e) {
-                e.printStackTrace();
-                System.exit(1);
-            }
-        }
     }
 }

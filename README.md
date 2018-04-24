@@ -18,4 +18,4 @@ Create two directories to be visible from web.
 * media/stickers/
 
 ## Other
-* ffmpeg is required to convert webp stickers to png files; cleanup doesn't work yet, but who cares about backend, right?
+* ffmpeg is required to convert webp stickers to png files.
