@@ -38,7 +38,7 @@ public class ThreadUpdater extends ChatUpdater {
                 sendToClients(0, String.format(
                         "%s %s \"%s\": %s",
                         thread.getAuthor(),
-                        Properties.res.getString("newThread"),
+                        Properties.strings.getProperty("newThread"),
                         thread.getTitle(),
                         thread.getUrl()
                 ));
@@ -55,9 +55,9 @@ public class ThreadUpdater extends ChatUpdater {
                 if (!posts.isEmpty()) {
                     for (Post post : posts) {
                         String message = String.format("\uD83C\uDD95 %s «%s», %s: %s",
-                                Properties.res.getString("newPost"),
+                                Properties.strings.getProperty("newPost"),
                                 post.getThreadTitle(),
-                                Properties.res.getString("link").toLowerCase(),
+                                Properties.strings.getProperty("link").toLowerCase(),
                                 post.getUrl()
                         );
 

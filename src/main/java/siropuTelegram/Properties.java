@@ -1,7 +1,6 @@
 package siropuTelegram;
 
 import java.io.*;
-import java.util.ResourceBundle;
 
 public class Properties {
     private static java.util.Properties properties = new java.util.Properties();
@@ -15,7 +14,7 @@ public class Properties {
     public static int lastThreadId = 0;
     public static int lastPostId = 0;
 
-    public static ResourceBundle res;
+    public static java.util.Properties strings = new java.util.Properties();
 
     private static BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
 
@@ -67,7 +66,9 @@ public class Properties {
         mediaurl = getProperty("mediaurl", "Url to the media folder (https://hostname/media/)");
         ffmpeg = getProperty("ffmpeg", "Ffmpeg binary path (to convert webp stickers to png)");
 
-        res = ResourceBundle.getBundle("locale." + properties.getProperty("lang", "en"));
+        Reader reader = new InputStreamReader(Properties.class.getClassLoader().getResourceAsStream("locale/" + properties.getProperty("lang", "en") + ".properties"), "UTF-8");
+        strings.load(reader);
+        reader.close();
 
         exclude_nodes = properties.getProperty("exclude_nodes", "");
         logging = properties.getProperty("logging", "0");

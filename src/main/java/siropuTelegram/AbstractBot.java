@@ -53,8 +53,8 @@ abstract class AbstractBot extends TelegramLongPollingBot {
             }
 
             if (s.toLowerCase().contains("[/quote]")) {
-                s = s.replaceAll("(?is)\\[quote=\"(.+?),(?:.+?)\"\\](.*?)\\[/quote\\]", Properties.res.getString("quoteOf") + " $1: «$2»\n").replaceAll("(?is)\\[/quote\\]", "");
-                s = s.replaceAll("(?is)\\[quote\\](.*?)\\[/quote\\]", Properties.res.getString("quote") + ": «$1»\n").replaceAll("(?is)\\[/quote\\]", "");
+                s = s.replaceAll("(?is)\\[quote=\"(.+?),(?:.+?)\"\\](.*?)\\[/quote\\]", Properties.strings.getProperty("quoteOf") + " $1: «$2»\n").replaceAll("(?is)\\[/quote\\]", "");
+                s = s.replaceAll("(?is)\\[quote\\](.*?)\\[/quote\\]", Properties.strings.getProperty("quote") + ": «$1»\n").replaceAll("(?is)\\[/quote\\]", "");
             }
 
             s = s.replaceAll("(?i)(\\[(\\/?)(.*?\\]))", "");
