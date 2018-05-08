@@ -13,10 +13,11 @@ xf_prefix=xf_
 lang=en
 ffmpeg=ffmpeg
 logging=0
+# bot admins, telegram usernames separated by comma
+admins=admin1,admin2
 # don't announce threads/posts from this nodes, separate by comma
 exlucde_nodes=15,30
 # print messages received by bot to the system console
 dev=0
 # keep as is
-version=4
 sqlconnections=0

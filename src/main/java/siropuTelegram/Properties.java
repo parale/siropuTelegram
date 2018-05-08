@@ -1,6 +1,10 @@
 package siropuTelegram;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 
 public class Properties {
     private static java.util.Properties properties = new java.util.Properties();
@@ -9,12 +13,15 @@ public class Properties {
     public static String bot_token, bot_username, logging;
     public static String saveto, mediaurl, dev, forumurl, exclude_nodes;
     public static String ffmpeg;
+    public static ArrayList<String> admins = new ArrayList<>();
 
     public static int lastMessageId = 0;
     public static int lastThreadId = 0;
     public static int lastPostId = 0;
 
-    public static java.util.Properties strings = new java.util.Properties();
+    private static boolean askForValue = true;
+
+    static java.util.Properties strings = new java.util.Properties();
 
     private static BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
 
@@ -25,7 +32,7 @@ public class Properties {
 
     private static String getProperty(String key, String description) throws IOException {
         String value = properties.getProperty(key, "");
-        if (value.isEmpty()) {
+        if (value.isEmpty() && askForValue) {
             System.out.println(description);
             String result = bufferedReader.readLine();
             properties.setProperty(key, result);
@@ -35,7 +42,7 @@ public class Properties {
         }
     }
 
-    private static void setProperties() throws IOException {
+    static void setProperties() throws IOException {
         FileInputStream fileInputStream;
 
         try {
@@ -73,8 +80,36 @@ public class Properties {
         exclude_nodes = properties.getProperty("exclude_nodes", "");
         logging = properties.getProperty("logging", "0");
 
+        try {
+            Collections.addAll(admins, properties.getProperty("admins", "").split(","));
+        } catch (NullPointerException ignore) {
+        }
+
         fileInputStream.close();
         bufferedReader.close();
+    }
+
+    static boolean changeProperty(String key, String value) {
+        properties.setProperty(key, value);
+
+        try {
+            FileOutputStream fileOutputStream = new FileOutputStream("bot.properties");
+            properties.store(fileOutputStream, null);
+            fileOutputStream.close();
+
+            askForValue = false;
+            setProperties();
+        } catch (IOException e) {
+            Logger.logException(e);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    static Set<Map.Entry<Object, Object>> getProperties() {
+        return properties.entrySet();
     }
 
     private void saveProperties() throws IOException {
@@ -96,6 +131,7 @@ public class Properties {
         properties.setProperty("ffmpeg", ffmpeg);
         properties.setProperty("exclude_nodes", exclude_nodes);
         properties.setProperty("logging", logging);
+        properties.setProperty("admins", String.join(",", admins));
 
         properties.store(fileOutputStream, null);
         fileOutputStream.close();

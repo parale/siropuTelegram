@@ -19,6 +19,8 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -89,20 +91,39 @@ class TelegramBot extends AbstractBot {
         }
 
         if (update.hasMessage() && update.getMessage().hasText()) {
-            if (update.getMessage().getText().startsWith("/start")) {
+            String cmd = update.getMessage().getText();
+            if (cmd.startsWith("/start")) {
                 startMessage(update, user);
-            } else if (update.getMessage().getText().startsWith("/stop")) {
+            } else if (cmd.startsWith("/stop")) {
                 stopMessage(update, user);
-            } else if (!update.getMessage().getText().isEmpty() && forum.isUserActive(user.getTelegramUserName())) {
-                if (update.getMessage().getText().startsWith("/new")) {
+            }  else if (cmd.startsWith("/set") && Properties.admins.contains(user.getTelegramUserName())) {
+                String[] string = cmd.split(" ");
+                if (string.length == 3) {
+                    if (Properties.changeProperty(string[1], string[2])) {
+                        replyTo(user.getTelegramChatId(), Properties.strings.getProperty("done"));
+                    } else {
+                        replyTo(user.getTelegramChatId(), Properties.strings.getProperty("error"));
+                    }
+                } else if (string.length == 1) {
+                    Set<Map.Entry<Object, Object>> props = Properties.getProperties();
+                    String result = "";
+
+                    for (Map.Entry<Object, Object> entry : props) {
+                        result += String.format("%s = %s\n", entry.getKey(), entry.getValue());
+                    }
+
+                    replyTo(user.getTelegramChatId(), result);
+                }
+            } else if (!cmd.isEmpty() && forum.isUserActive(user.getTelegramUserName())) {
+                if (cmd.startsWith("/new")) {
                     whatsNew(update, user);
-                } else if (update.getMessage().getText().startsWith("/follow")) {
+                } else if (cmd.startsWith("/follow")) {
                     try {
                         follow(update, user);
                     } catch (NumberFormatException e) {
                         replyTo(user.getTelegramChatId(), Properties.strings.getProperty("unknownError"));
                     }
-                } else if (update.getMessage().getText().startsWith("/unfollow")) {
+                } else if (cmd.startsWith("/unfollow")) {
                     unfollow(update, user);
                 } else {
                     textMessage(update, user);
