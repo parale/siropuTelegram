@@ -63,7 +63,8 @@ public class ThreadUpdater extends ChatUpdater {
 
                         bot.replyTo(
                                 user.getTelegramChatId(),
-                                message
+                                message,
+                                true
                         );
                     }
                 }

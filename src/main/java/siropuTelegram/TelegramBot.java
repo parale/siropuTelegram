@@ -37,10 +37,25 @@ class TelegramBot extends AbstractBot {
         threadUpdater.start();
     }
 
-    synchronized void replyTo(long chat_id, String text) {
+    void replyTo(long chat_id, String text, boolean disableWebPreview) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(chat_id);
-        sendMessage.disableWebPagePreview();
+        if (disableWebPreview) sendMessage.disableWebPagePreview();
+
+        String message = cutTags(text);
+        try {
+            if (message.getBytes(StandardCharsets.UTF_8).length < 4096) {
+                sendMessage.setText(message);
+                execute(sendMessage);
+            }
+        } catch (TelegramApiException e) {
+            Logger.logException(e);
+        }
+    }
+
+    void replyTo(long chat_id, String text) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(chat_id);
 
         String message = cutTags(text);
         try {
@@ -295,7 +310,7 @@ class TelegramBot extends AbstractBot {
             );
             forum.close();
 
-            Runtime.getRuntime().exec("rm " + webpFile);
+            //Runtime.getRuntime().exec("rm " + webpFile);
         } catch (TelegramApiException | IOException e) {
             Logger.logException(e);
         }
@@ -318,7 +333,7 @@ class TelegramBot extends AbstractBot {
                                 post.getMessage() +
                                 "\n\n";
 
-                replyTo(update.getMessage().getChatId(), cutTags(message));
+                replyTo(update.getMessage().getChatId(), cutTags(message), true);
             }
         } else {
             replyTo(update.getMessage().getChatId(), Properties.strings.getProperty("noNewPosts"));
