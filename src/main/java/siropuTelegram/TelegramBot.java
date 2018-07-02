@@ -2,9 +2,7 @@ package siropuTelegram;
 
 import org.telegram.telegrambots.api.methods.GetFile;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
-import org.telegram.telegrambots.api.objects.File;
-import org.telegram.telegrambots.api.objects.PhotoSize;
-import org.telegram.telegrambots.api.objects.Update;
+import org.telegram.telegrambots.api.objects.*;
 import org.telegram.telegrambots.api.objects.stickers.Sticker;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
 import siropuTelegram.XenForo.Post;
@@ -94,13 +92,30 @@ class TelegramBot extends AbstractBot {
             user.setXfUserId(forum.getActiveUserId(user.getTelegramUserName()));
 
             if (user.getXfUserId() > 0) {
+                try {
+                    String caption = update.getMessage().getCaption();
+                    if (caption.length() > 0)
+                        forum.sendMessage(user.getXfUserId(), update.getMessage().getCaption());
+                } catch (NullPointerException ignored) { }
+
                 if (update.hasMessage() && update.getMessage().hasPhoto()) {
                     photoMessage(update, user);
                 }
 
-                Sticker sticker;
-                if ((sticker = update.getMessage().getSticker()) != null) {
-                    stickerMessage(sticker, user);
+                if ((update.getMessage().getSticker()) != null) {
+                    stickerMessage(update, user);
+                }
+
+                if (update.getMessage().getVideo() != null) {
+                    videoMessage(update, user);
+                }
+
+                if (update.getMessage().getVoice() != null) {
+                    voiceMessage(update, user);
+                }
+
+                if (update.getMessage().getVideoNote() != null) {
+                    videoNoteMessage(update, user);
                 }
             }
         }
@@ -243,22 +258,8 @@ class TelegramBot extends AbstractBot {
                     fos.close();
 
                     XenForo forum = new XenForo();
-                    try {
-                        String caption = update.getMessage().getCaption();
-                        if (caption.length() > 0)
-                            forum.sendMessage(user.getXfUserId(), update.getMessage().getCaption());
-                    } catch (NullPointerException ignored) {
-                    }
-
                     forum.sendMessage(user.getXfUserId(), String.format("[url]%s%s[/url]", Properties.mediaurl, fileName));
-                    SendMessage reply = new SendMessage();
-                    reply.setChatId(update.getMessage().getChatId());
-                    reply.setText(Properties.strings.getProperty("photoSuccess"));
-                    try {
-                        execute(reply);
-                    } catch (TelegramApiException e) {
-                        Logger.logException(e);
-                    }
+                    forum.close();
                 } catch (IOException e) {
                     photoFail(update);
                     Logger.logException(e);
@@ -280,9 +281,30 @@ class TelegramBot extends AbstractBot {
         }
     }
 
-    private void stickerMessage(Sticker sticker, User user) {
+    private String getFile(String fileId) {
         GetFile getFileMethod = new GetFile();
-        getFileMethod.setFileId(sticker.getFileId());
+        getFileMethod.setFileId(fileId);
+        try {
+            File file = execute(getFileMethod);
+            String filePath = file.getFilePath();
+            String originalFileName = filePath.split("/")[1];
+            URL website = new URL("https://api.telegram.org/file/bot" + getBotToken() + "/" + filePath);
+            ReadableByteChannel rbc = Channels.newChannel(website.openStream());
+            String videoFile = Properties.saveto + originalFileName;
+            FileOutputStream fos = new FileOutputStream(videoFile);
+            fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+            fos.close();
+
+            return originalFileName;
+        } catch (TelegramApiException | IOException e) {
+            Logger.logException(e);
+            return null;
+        }
+    }
+
+    private void stickerMessage(Update update, User user) {
+        GetFile getFileMethod = new GetFile();
+        getFileMethod.setFileId(update.getMessage().getSticker().getFileId());
         try {
             File file = execute(getFileMethod);
             String filePath = file.getFilePath();
@@ -309,10 +331,50 @@ class TelegramBot extends AbstractBot {
                     String.format("[sticker]%sstickers/%s[/sticker]", Properties.mediaurl, outputFile)
             );
             forum.close();
-
-            //Runtime.getRuntime().exec("rm " + webpFile);
         } catch (TelegramApiException | IOException e) {
             Logger.logException(e);
+        }
+    }
+
+    private void videoMessage(Update update, User user) {
+        String file = getFile(update.getMessage().getVideo().getFileId());
+        if (file != null) {
+            XenForo forum = new XenForo();
+            forum.sendMessage(
+                    user.getXfUserId(),
+                    String.format("[url]%s%s[/url]", Properties.mediaurl, file)
+            );
+            forum.close();
+        } else {
+            photoFail(update);
+        }
+    }
+
+    private void voiceMessage(Update update, User user) {
+        String file = getFile(update.getMessage().getVoice().getFileId());
+        if (file != null) {
+            XenForo forum = new XenForo();
+            forum.sendMessage(
+                    user.getXfUserId(),
+                    String.format("[url]%s%s[/url]", Properties.mediaurl, file)
+            );
+            forum.close();
+        } else {
+            photoFail(update);
+        }
+    }
+
+    private void videoNoteMessage(Update update, User user) {
+        String file = getFile(update.getMessage().getVideoNote().getFileId());
+        if (file != null) {
+            XenForo forum = new XenForo();
+            forum.sendMessage(
+                    user.getXfUserId(),
+                    String.format("[url]%s%s[/url]", Properties.mediaurl, file)
+            );
+            forum.close();
+        } else {
+            photoFail(update);
         }
     }
 

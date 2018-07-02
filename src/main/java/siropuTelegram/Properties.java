@@ -1,5 +1,7 @@
 package siropuTelegram;
 
+import siropuTelegram.XenForo.ChatMessage;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;

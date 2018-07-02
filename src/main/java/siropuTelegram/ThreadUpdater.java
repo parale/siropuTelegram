@@ -54,18 +54,20 @@ public class ThreadUpdater extends ChatUpdater {
                 ArrayList<Post> posts = forum.getNewMessages(user);
                 if (!posts.isEmpty()) {
                     for (Post post : posts) {
-                        String message = String.format("\uD83C\uDD95 %s «%s», %s: %s",
-                                Properties.strings.getProperty("newPost"),
-                                post.getThreadTitle(),
-                                Properties.strings.getProperty("link").toLowerCase(),
-                                post.getUrl()
-                        );
+                        if (post.getAuthorId() != user.getXfUserId()) {
+                            String message = String.format("\uD83C\uDD95 %s «%s», %s: %s",
+                                    Properties.strings.getProperty("newPost"),
+                                    post.getThreadTitle(),
+                                    Properties.strings.getProperty("link").toLowerCase(),
+                                    post.getUrl()
+                            );
 
-                        bot.replyTo(
-                                user.getTelegramChatId(),
-                                message,
-                                true
-                        );
+                            bot.replyTo(
+                                    user.getTelegramChatId(),
+                                    message,
+                                    true
+                            );
+                        }
                     }
                 }
             }

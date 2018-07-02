@@ -62,49 +62,50 @@ public class XenForo {
     }
 
     public ArrayList<ChatMessage> getAllMessages() {
-        ResultSet result;
-        if (Properties.lastMessageId == 0) {
-            result = query("select value from " + Properties.settings_table + " where name = \"lastMessageId\"");
-            try {
-                if (result != null) {
-                    result.next();
-                    int newMessageId = result.getInt(1);
-                    if (Properties.lastMessageId == newMessageId) {
-                        return null;
-                    } else {
-                        Properties.lastMessageId = newMessageId;
+            ResultSet result;
+            if (Properties.lastMessageId == 0) {
+                result = query("select value from " + Properties.settings_table + " where name = \"lastMessageId\"");
+                try {
+                    if (result != null) {
+                        result.next();
+                        int newMessageId = result.getInt(1);
+                        if (Properties.lastMessageId == newMessageId) {
+                            return null;
+                        } else {
+                            Properties.lastMessageId = newMessageId;
+                        }
                     }
+                } catch (SQLException e) {
+                    siropuTelegram.Logger.logException(e);
+                    return null;
                 }
-            } catch (SQLException e) {
-                siropuTelegram.Logger.logException(e);
+            }
+
+            result = query("select shout_id, " + Properties.xf_prefix + "user.username, shout_message, shout_date, " + Properties.xf_prefix + "user.user_id from " + Properties.xf_prefix + "siropu_shoutbox_shout inner join " + Properties.xf_prefix + "user on " + Properties.xf_prefix + "siropu_shoutbox_shout.shout_user_id = " + Properties.xf_prefix + "user.user_id where shout_id > " + Properties.lastMessageId);
+            ArrayList<ChatMessage> messages = new ArrayList<>();
+            if (result != null) {
+                try {
+                    while (result.next()) {
+                        ChatMessage chatMessage = new ChatMessage(
+                                result.getString(3),
+                                result.getString(2),
+                                result.getInt(5)
+                        );
+
+                        Properties.lastMessageId = result.getInt(1);
+                        messages.add(chatMessage);
+                    }
+
+                    update("update " + Properties.settings_table + " set value = " + Properties.lastMessageId + " where name = \"lastMessageId\"");
+
+                    return messages;
+                } catch (SQLException e) {
+                    siropuTelegram.Logger.logException(e);
+                    return null;
+                }
+            } else {
                 return null;
             }
-        }
-
-        result = query("select shout_id, " + Properties.xf_prefix + "user.username, shout_message, shout_date, " + Properties.xf_prefix + "user.user_id from " + Properties.xf_prefix + "siropu_shoutbox_shout inner join " + Properties.xf_prefix + "user on " + Properties.xf_prefix + "siropu_shoutbox_shout.shout_user_id = " + Properties.xf_prefix + "user.user_id where shout_id > " + Properties.lastMessageId);
-        ArrayList<ChatMessage> messages = new ArrayList<>();
-        if (result != null) {
-            try {
-                while (result.next()) {
-                    ChatMessage chatMessage = new ChatMessage(
-                            result.getString(3),
-                            result.getString(2),
-                            result.getInt(5)
-                    );
-
-                    Properties.lastMessageId = result.getInt(1);
-                    messages.add(chatMessage);
-                }
-
-                update("update " + Properties.settings_table + " set value = " + Properties.lastMessageId + " where name = \"lastMessageId\"");
-                return messages;
-            } catch (SQLException e) {
-                siropuTelegram.Logger.logException(e);
-                return null;
-            }
-        } else {
-            return null;
-        }
     }
 
     public ArrayList<Thread> getNewThreads() {
@@ -174,11 +175,11 @@ public class XenForo {
         }
 
         // i don't want to see mysql ever again
-        result = query("SELECT p1.post_id, p1.thread_id, p1.username, p1.message, title\n" +
+        result = query("SELECT p1.post_id, p1.thread_id, p1.username, p1.user_id, p1.message, title\n" +
                 "FROM " + Properties.xf_prefix + "post p1\n" +
                 "INNER JOIN (SELECT pi.thread_id, MAX(pi.post_id) AS maxpostid, thread.node_id, thread.title\n" +
                 "            FROM " + Properties.xf_prefix + "post pi join " + Properties.xf_prefix + "thread as thread on pi.thread_id = thread.thread_id\n" +
-                "            WHERE pi.post_date >= " + date + " AND pi.message_state = 'visible' AND pi.post_id > " + lastPostId + "  " + exclude + " GROUP BY pi.thread_id) p2\n" +
+                "            WHERE pi.post_date >= " + date + " AND pi.message_state = 'visible' AND pi.post_id  > " + lastPostId + "  " + exclude + " AND pi.user_id != " + user.getXfUserId() + " GROUP BY pi.thread_id) p2\n" +
                 "  ON (p1.post_id = p2.maxpostid)\n" +
                 " ORDER BY post_id DESC LIMIT 5;");
 
@@ -190,8 +191,9 @@ public class XenForo {
                             result.getInt(1),
                             result.getInt(2),
                             result.getString(3),
-                            result.getString(4),
-                            result.getString(5))
+                            result.getInt(4),
+                            result.getString(5),
+                            result.getString(6))
                     );
                 }
 
@@ -241,7 +243,7 @@ public class XenForo {
         if (!threads.isEmpty()) {
             for (int thread : threads) {
                 result = query(
-                        "SELECT " + Properties.xf_prefix + "post.post_id, " + Properties.xf_prefix + "post.thread_id, " + Properties.xf_prefix + "post.username, " + Properties.xf_prefix + "post.message, t.title " +
+                        "SELECT " + Properties.xf_prefix + "post.post_id, " + Properties.xf_prefix + "post.thread_id, " + Properties.xf_prefix + "post.username, " + Properties.xf_prefix + "post.user_id, " + Properties.xf_prefix + "post.message, t.title " +
                                 "FROM " + Properties.xf_prefix + "post JOIN xf_thread t " +
                                 "ON " + Properties.xf_prefix + "post.thread_id = t.thread_id " +
                                 "WHERE " + Properties.xf_prefix + "post.thread_id = " + thread +
@@ -255,8 +257,9 @@ public class XenForo {
                                     result.getInt(1),
                                     result.getInt(2),
                                     result.getString(3),
-                                    result.getString(4),
-                                    result.getString(5)
+                                    result.getInt(4),
+                                    result.getString(5),
+                                    result.getString(6)
                             ));
                         }
                     } catch (SQLException e) {
